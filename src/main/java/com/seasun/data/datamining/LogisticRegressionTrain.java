@@ -69,11 +69,11 @@ public class LogisticRegressionTrain
 
 				Vector input = new RandomAccessSparseVector(numFeatures);
 				int targetValue = processLine(line, input);
-				// check performance while this is still news
-				double logP = lr.logLikelihood(targetValue, input);
-			
-				double p = lr.classifyScalar(input);
+				
 				if (scores) {
+					// check performance while this is still news
+					double logP = lr.logLikelihood(targetValue, input);
+					double p = lr.classifyScalar(input);
 					output.printf(Locale.ENGLISH, "%2d  %1.2f  |  %2.4f %10.4f%n",
 							targetValue, p, lr.currentLearningRate(), logP);
 				}
