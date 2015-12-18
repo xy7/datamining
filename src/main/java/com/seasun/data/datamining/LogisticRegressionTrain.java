@@ -9,6 +9,8 @@ import java.io.PrintWriter;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.TreeMap;
 
 import org.apache.commons.io.Charsets;
 import org.apache.commons.io.FileUtils;
@@ -31,7 +33,8 @@ public class LogisticRegressionTrain
 	private static int numFeatures = 6;
 
 	public static int processLine(String line, Vector featureVector) {
-		featureVector.setQuick(0, 1.0);
+		
+		featureVector.setQuick(0, 1.0);//填充常量 k0
 		List<String> values = Arrays.asList(line.split(COLUMN_SPLIT));
 		int res = 0;
 		for (int i = 0; i < values.size(); i++) {
@@ -49,7 +52,6 @@ public class LogisticRegressionTrain
 	}
 
 	public static void main(String[] args) {
-		int passes = 20;
 
 		OnlineLogisticRegression lr = new OnlineLogisticRegression(2, numFeatures, new L1());
 		lr.lambda(1e-4);// 先验分布的加权因子
@@ -58,107 +60,100 @@ public class LogisticRegressionTrain
 
 		File dir = new File("D:/bigdata/data/lost");
 		File[] files = dir.listFiles();
+		
+		int passes = 20;
+		analysisFiles(files, new LineHandler(){
+			@Override
+			public boolean handle(String line) {
+				// TODO Auto-generated method stub
 
-		trainModelForFiles(passes, lr, files);
-		estimateEffect(lr, files);
+				Vector input = new RandomAccessSparseVector(numFeatures);
+				int targetValue = processLine(line, input);
+				// check performance while this is still news
+				double logP = lr.logLikelihood(targetValue, input);
+			
+				double p = lr.classifyScalar(input);
+				if (scores) {
+					output.printf(Locale.ENGLISH, "%2d  %1.2f  |  %2.4f %10.4f%n",
+							targetValue, p, lr.currentLearningRate(), logP);
+				}
+
+				// now update model
+				lr.train(targetValue, input);
+				return true;
+			}
+		}, passes);
+		
+		output.printf(Locale.ENGLISH, "%s %n", lr.getBeta().toString());
+		try (DataOutputStream modelOutput = new DataOutputStream(new FileOutputStream("D:/bigdata/data/lrParam.txt"))) {
+			lr.write(modelOutput);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		
+		Integer[] res = {0, 0, 0, 0};//int all = 0, lost = 0, preLost = 0, right = 0;
+		
+		analysisFiles(files, new LineHandler(){
+			
+			@Override
+			public boolean handle(String line) {
+				Vector input = new RandomAccessSparseVector(numFeatures);
+				int targetValue = processLine(line, input);
+				
+				double score = lr.classifyScalar(input);
+				int predictValue = score > 0.5 ? 1 : 0;
+				res[0]++;
+				if (targetValue == 1) {
+					res[1]++;
+					if (predictValue == 1) {
+						res[2]++;
+					}
+				}
+
+				if (predictValue == targetValue) {
+					res[3]++;
+				}
+				return true;
+			}
+		});
+
+		double coverRate = (double) res[2] / res[1];
+		double rightRate = (double) res[3] / res[0];
+		output.printf(Locale.ENGLISH, "cover rate:%2.4f   right rate:%2.4f %n"
+				, coverRate, rightRate);
+
 	}
-
-	private static void trainModelForFiles(int passes, OnlineLogisticRegression lr, File[] files) {
+	
+	private static void analysisFiles(File[] files, LineHandler handler){
+		analysisFiles(files, handler, 1);
+	}
+	
+	private static void analysisFiles(File[] files, LineHandler handler, int passes){
+		
 		for (int pass = 0; pass < passes; pass++) {
-
-			int samples = 0;
-
+			int all = 0;
+			int suc = 0;
 			for (File file : files) {
 				LineIterator it = null;
 				try {
 					it = FileUtils.lineIterator(file);
 					while (it.hasNext()) {
 						String line = it.nextLine();
-						trainModel(lr, samples, line);
+						all++;
+						if(handler.handle(line) )
+							suc++;
 					}// while lines
 				} catch (IOException e) {
-					System.out.println("!!!file read failed:" + e);
+					output.printf("!!!file read failed: %s %n", e);
 				} finally {
 					if (it != null)
 						LineIterator.closeQuietly(it);
 				}
 			}// for file
-		}
-
-		System.out.println(lr.getBeta());
-
-		try (DataOutputStream modelOutput = new DataOutputStream(new FileOutputStream("D:/bigdata/lr_model_param.txt"))) {
-			lr.write(modelOutput);
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+			
+			output.printf(Locale.ENGLISH, "pass %d: all(%d) sucess(%d) %n"
+					, pass, all, suc);
+		}// for pass
 	}
 
-	private static void trainModel(OnlineLogisticRegression lr, int samples, String line) {
-
-		double logPEstimate = 0;
-		Vector input = new RandomAccessSparseVector(numFeatures);
-		int targetValue = processLine(line, input);
-		// check performance while this is still news
-		double logP = lr.logLikelihood(targetValue, input);
-		if (!Double.isInfinite(logP)) {
-			if (samples < 20) {
-				logPEstimate = (samples * logPEstimate + logP) / (samples + 1);
-			} else {
-				logPEstimate = 0.95 * logPEstimate + 0.05 * logP;
-			}
-			samples++;
-		}
-		double p = lr.classifyScalar(input);
-		if (scores) {
-			output.printf(Locale.ENGLISH, "%10d: %2d  %1.2f  |  %2.4f %10.4f %10.4f%n",
-					samples, targetValue, p, lr.currentLearningRate(), logP, logPEstimate);
-		}
-
-		// now update model
-		lr.train(targetValue, input);
-	}
-
-	// 计算准确率和覆盖率
-	private static void estimateEffect(OnlineLogisticRegression lr, File[] files) {
-
-		int all = 0, lost = 0, preLost = 0, right = 0;
-		for (File file : files) {
-			LineIterator it = null;
-			try {
-				it = FileUtils.lineIterator(file);
-				while (it.hasNext()) {
-					String line = it.nextLine();
-					String[] columns = line.split(COLUMN_SPLIT);
-					Vector input = new RandomAccessSparseVector(numFeatures);
-					int targetValue = processLine(line, input);
-					
-					double score = lr.classifyScalar(input);
-					int predictValue = score > 0.5 ? 1 : 0;
-					all++;
-					if (targetValue == 1) {
-						lost++;
-						if (predictValue == 1) {
-							preLost++;
-						}
-					}
-
-					if (predictValue == targetValue) {
-						right++;
-					}
-				}// while
-			} catch (IOException e) {
-				System.out.println("!!!file read failed:" + e);
-			} finally {
-				if (it != null)
-					LineIterator.closeQuietly(it);
-			}
-		}// for files
-
-		double coverRate = (double) preLost / lost;
-		double rightRate = (double) right / all;
-
-		output.printf(Locale.ENGLISH, "cover rate:%2.4f   right rate:%2.4f %n",
-				 coverRate, rightRate);
-	}
 }
