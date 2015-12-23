@@ -26,28 +26,50 @@ import org.apache.mahout.math.Vector;
  */
 public class LogisticRegressionTrain
 {
-	private static final String COLUMN_SPLIT = "\t";
-	
 	private static boolean scores = true;
 	private static PrintWriter output = new PrintWriter(new OutputStreamWriter(System.out, Charsets.UTF_8), true);
-	private static int numFeatures = 6;
 
-	public static int processLine(String line, Vector featureVector) {
-		
+	//role_level first_login_cnt first_online_dur total_recharge total_recharge_cnt last7_login_cnt last7_login_daycnt last7_online_dur
+	private static int[] index = {10, 15, 16, 17, 25, 34, 43};
+	private static int numFeatures = index.length + 1;
+
+//	public static int parseLine(String line, Vector featureVector) {
+//		
+//		featureVector.setQuick(0, 1.0);//填充常量 k0
+//		List<String> values = Arrays.asList(line.split("\t"));
+//		int res = 0;
+//		for (int i = 0; i < values.size(); i++) {
+//			if (i == values.size() - 1) {
+//				res = Integer.parseInt(values.get(i));
+//				continue;
+//			}
+//
+//			featureVector.setQuick(i + 1, Double.parseDouble(values.get(i)));
+//		}
+//
+//		if (res != 1)
+//			res = 0;
+//		return res;
+//	}
+	
+	public static int parseLine(String line, Vector featureVector) throws Exception {
 		featureVector.setQuick(0, 1.0);//填充常量 k0
-		List<String> values = Arrays.asList(line.split(COLUMN_SPLIT));
-		int res = 0;
-		for (int i = 0; i < values.size(); i++) {
-			if (i == values.size() - 1) {
-				res = Integer.parseInt(values.get(i));
-				continue;
-			}
-
-			featureVector.setQuick(i + 1, Double.parseDouble(values.get(i)));
+		List<String> values = Arrays.asList(line.split("\1"));
+		if(values.size() < index[index.length-1] + 1)
+			throw new Exception("parse error, columns size to small: " + values.size());
+		
+		for (int i = 0; i < index.length; i++) {
+			String s = values.get(index[i]);
+			if(s.equals("\\N"))
+				s = "0";
+			featureVector.setQuick(i + 1, Double.parseDouble(s));
 		}
-
-		if (res != 1)
-			res = 0;
+		
+		int res = Integer.parseInt(values.get(65));
+		if(res !=0 && res != 1){
+			System.out.println("parse error: " + line);
+			throw new Exception("parse error, res not in (0,1)");
+		}
 		return res;
 	}
 
@@ -58,17 +80,28 @@ public class LogisticRegressionTrain
 		lr.learningRate(50);// 1e-3
 		lr.alpha(1 - 1.0e-3);// 学习率的指数衰减率
 
-		File dir = new File("D:/bigdata/data/lost");
+		File dir = new File("D:/bigdata/data/xyfm/fig_app_user_2015-12-15/");
 		File[] files = dir.listFiles();
 		
-		int passes = 20;
+		//一半样本用来训练，一半用来预测
+		int half = 1313/2;
+		int passes = 5;
 		analysisFiles(files, new LineHandler(){
+			int i = 0;
 			@Override
 			public boolean handle(String line) {
-				// TODO Auto-generated method stub
-
+				i++;
+				if(i>half)
+					return false;
 				Vector input = new RandomAccessSparseVector(numFeatures);
-				int targetValue = processLine(line, input);
+				int targetValue;
+				try {
+					targetValue = parseLine(line, input);
+				} catch (Exception e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+					return false;
+				}
 				
 				if (scores) {
 					// check performance while this is still news
@@ -94,11 +127,21 @@ public class LogisticRegressionTrain
 		Integer[] res = {0, 0, 0, 0};//int all = 0, lost = 0, preLost = 0, right = 0;
 		
 		analysisFiles(files, new LineHandler(){
-			
+			int i = 0;
 			@Override
 			public boolean handle(String line) {
+				i++;
+				if(i<=half)
+					return false;
 				Vector input = new RandomAccessSparseVector(numFeatures);
-				int targetValue = processLine(line, input);
+				int targetValue;
+				try {
+					targetValue = parseLine(line, input);
+				} catch (Exception e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+					return false;
+				}
 				
 				double score = lr.classifyScalar(input);
 				int predictValue = score > 0.5 ? 1 : 0;
@@ -119,8 +162,8 @@ public class LogisticRegressionTrain
 
 		double coverRate = (double) res[2] / res[1];
 		double rightRate = (double) res[3] / res[0];
-		output.printf(Locale.ENGLISH, "cover rate:%2.4f   right rate:%2.4f %n"
-				, coverRate, rightRate);
+		output.printf(Locale.ENGLISH, "cover rate:%2.4f   right rate:%2.4f  1cnt:%d  0cnt:%d %n"
+				, coverRate, rightRate, res[1], res[0]-res[1]);
 
 	}
 	
@@ -136,7 +179,7 @@ public class LogisticRegressionTrain
 			for (File file : files) {
 				LineIterator it = null;
 				try {
-					it = FileUtils.lineIterator(file);
+					it = FileUtils.lineIterator(file, "UTF-8");
 					while (it.hasNext()) {
 						String line = it.nextLine();
 						all++;
