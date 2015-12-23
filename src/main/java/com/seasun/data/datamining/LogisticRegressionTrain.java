@@ -252,7 +252,7 @@ public class LogisticRegressionTrain{
 			int suc = 0;
 			for (File file : files) {
 				
-				if(!file.isFile())
+				if(file.isDirectory())
 					continue;
 				
 				LineIterator it = null;
