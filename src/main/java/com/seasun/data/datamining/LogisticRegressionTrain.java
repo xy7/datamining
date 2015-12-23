@@ -28,8 +28,9 @@ import org.apache.mahout.math.Vector;
  * Hello world!
  *
  */
-public class LogisticRegressionTrain
-{
+public class LogisticRegressionTrain{
+	
+	private static boolean loadFile = false;
 	private static String SAMPLE_DIR = "./fig_app_user/sample/";
 	private static int TARIN_PASSES = 5;
 	private static String PREDICT_DIR = "./fig_app_user/predict/";
@@ -64,6 +65,8 @@ public class LogisticRegressionTrain
 	}
 	
 	public static boolean loadConfigFile(String file){
+		if(loadFile)
+			return true;
 		Properties props = new Properties();
 	    //InputStream in = LogisticRegressionTrain.class.getResourceAsStream(file); //配置文件的相对路径以类文件所在目录作为当前目录
 		InputStream in = null;
@@ -97,35 +100,30 @@ public class LogisticRegressionTrain
 		    	System.out.println(i);
 	    }
 	    
-	    replaceStringProp(props, "column_split", COLUMN_SPLIT);
-	    replaceStringProp(props, "model_param_file", MODEL_PARAM_FILE);
-	    replaceStringProp(props, "sample_dir", SAMPLE_DIR);
-	    replaceStringProp(props, "train_passes", TARIN_PASSES);
-	    replaceStringProp(props, "predict_dir", PREDICT_DIR);
+	    COLUMN_SPLIT = replaceStringProp(props, "column_split", COLUMN_SPLIT);
+	    MODEL_PARAM_FILE = replaceStringProp(props, "model_param_file", MODEL_PARAM_FILE);
+	    SAMPLE_DIR = replaceStringProp(props, "sample_dir", SAMPLE_DIR);
+	    TARIN_PASSES = Integer.parseInt( replaceStringProp(props, "train_passes", Integer.toString(TARIN_PASSES) ) );
+	    PREDICT_DIR = replaceStringProp(props, "predict_dir", PREDICT_DIR);
   
+	    loadFile = true;
 	    return true;
 	}
 	
-	private static void replaceStringProp(Properties props, String key, String target){
+	private static String replaceStringProp(Properties props, String key, String target){
 		 String value = props.getProperty(key);
 		    if(value != null)
 		    	target = value;
 		    System.out.println(key + ": " + target);
+		   return target;
 	}
 	
-	private static void replaceStringProp(Properties props, String key, int target){
-		 String value = props.getProperty(key);
-		    if(value != null)
-		    	target = Integer.parseInt(value);
-		    System.out.println(key + ": " + target);
-	}
-
 	public static void evalModel() {
 		OnlineLogisticRegression lr = new OnlineLogisticRegression();
 		
 		InputStream input = null;
 		try {
-			input = new FileInputStream(PREDICT_DIR);
+			input = new FileInputStream(MODEL_PARAM_FILE);
 			DataInput in = new DataInputStream(input);
 			lr.readFields(in);
 			input.close();
