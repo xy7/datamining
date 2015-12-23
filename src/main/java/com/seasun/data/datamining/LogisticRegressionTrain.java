@@ -1,16 +1,20 @@
 package com.seasun.data.datamining;
 
+import java.io.DataInput;
+import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.Properties;
 
 import org.apache.commons.io.Charsets;
 import org.apache.commons.io.FileUtils;
@@ -26,41 +30,27 @@ import org.apache.mahout.math.Vector;
  */
 public class LogisticRegressionTrain
 {
+	private static String SAMPLE_DIR = "./fig_app_user/sample/";
+	private static int TARIN_PASSES = 5;
+	private static String PREDICT_DIR = "./fig_app_user/predict/";
+	private static String MODEL_PARAM_FILE = "lrParam.txt";
+	private static String COLUMN_SPLIT = "\1";
 	private static boolean scores = true;
 	private static PrintWriter output = new PrintWriter(new OutputStreamWriter(System.out, Charsets.UTF_8), true);
 
 	//role_level first_login_cnt first_online_dur total_recharge total_recharge_cnt last7_login_cnt last7_login_daycnt last7_online_dur
-	private static int[] index = {10, 15, 16, 17, 25, 34, 43};
-	private static int numFeatures = index.length + 1;
-
-//	public static int parseLine(String line, Vector featureVector) {
-//		
-//		featureVector.setQuick(0, 1.0);//填充常量 k0
-//		List<String> values = Arrays.asList(line.split("\t"));
-//		int res = 0;
-//		for (int i = 0; i < values.size(); i++) {
-//			if (i == values.size() - 1) {
-//				res = Integer.parseInt(values.get(i));
-//				continue;
-//			}
-//
-//			featureVector.setQuick(i + 1, Double.parseDouble(values.get(i)));
-//		}
-//
-//		if (res != 1)
-//			res = 0;
-//		return res;
-//	}
+	private static int[] index;
+	private static int numFeatures;
 	
 	public static int parseLine(String line, Vector featureVector) throws Exception {
 		featureVector.setQuick(0, 1.0);//填充常量 k0
-		List<String> values = Arrays.asList(line.split("\1"));
+		List<String> values = Arrays.asList(line.split(COLUMN_SPLIT));
 		if(values.size() < index[index.length-1] + 1)
 			throw new Exception("parse error, columns size to small: " + values.size());
 		
 		for (int i = 0; i < index.length; i++) {
 			String s = values.get(index[i]);
-			if(s.equals("\\N"))
+			if(s.equals("\\N"))//null值替换为空值
 				s = "0";
 			featureVector.setQuick(i + 1, Double.parseDouble(s));
 		}
@@ -72,67 +62,98 @@ public class LogisticRegressionTrain
 		}
 		return res;
 	}
+	
+	public static boolean loadConfigFile(String file){
+		Properties props = new Properties();
+	    //InputStream in = LogisticRegressionTrain.class.getResourceAsStream(file); //配置文件的相对路径以类文件所在目录作为当前目录
+		InputStream in = null;
+		try {
+			in = new FileInputStream(file); //配置文件的相对路径以工作目录
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+			System.out.println("read config file error");
+			return false;
+		}
+	    
+	    try {
+			props.load(in);
+			in.close();
+		} catch (IOException e1) {
+			e1.printStackTrace();
+			System.out.println("load config file error");
+			return false;
+		}
+  
+	    String indexStr = props.getProperty("index");
+	    if(indexStr != null){
+	    	String[] indexArray = indexStr.split(",");
+	    	index = new int[indexArray.length];
+	    	for(int i=0;i<indexArray.length;i++){
+	    		index[i] = Integer.parseInt(indexArray[i].trim());
+	    	}
+	    	numFeatures = index.length + 1;
+	    	System.out.println("index:");
+		    for(int i:index)
+		    	System.out.println(i);
+	    }
+	    
+	    replaceStringProp(props, "column_split", COLUMN_SPLIT);
+	    replaceStringProp(props, "model_param_file", MODEL_PARAM_FILE);
+	    replaceStringProp(props, "sample_dir", SAMPLE_DIR);
+	    replaceStringProp(props, "train_passes", TARIN_PASSES);
+	    replaceStringProp(props, "predict_dir", PREDICT_DIR);
+  
+	    return true;
+	}
+	
+	private static void replaceStringProp(Properties props, String key, String target){
+		 String value = props.getProperty(key);
+		    if(value != null)
+		    	target = value;
+		    System.out.println(key + ": " + target);
+	}
+	
+	private static void replaceStringProp(Properties props, String key, int target){
+		 String value = props.getProperty(key);
+		    if(value != null)
+		    	target = Integer.parseInt(value);
+		    System.out.println(key + ": " + target);
+	}
 
-	public static void main(String[] args) {
-
-		OnlineLogisticRegression lr = new OnlineLogisticRegression(2, numFeatures, new L1());
-		lr.lambda(1e-4);// 先验分布的加权因子
-		lr.learningRate(50);// 1e-3
-		lr.alpha(1 - 1.0e-3);// 学习率的指数衰减率
-
-		File dir = new File("D:/bigdata/data/xyfm/fig_app_user_2015-12-15/");
-		File[] files = dir.listFiles();
+	public static void evalModel() {
+		OnlineLogisticRegression lr = new OnlineLogisticRegression();
 		
-		//一半样本用来训练，一半用来预测
-		int half = 1313/2;
-		int passes = 5;
-		analysisFiles(files, new LineHandler(){
-			int i = 0;
-			@Override
-			public boolean handle(String line) {
-				i++;
-				if(i>half)
-					return false;
-				Vector input = new RandomAccessSparseVector(numFeatures);
-				int targetValue;
-				try {
-					targetValue = parseLine(line, input);
-				} catch (Exception e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-					return false;
-				}
-				
-				if (scores) {
-					// check performance while this is still news
-					double logP = lr.logLikelihood(targetValue, input);
-					double p = lr.classifyScalar(input);
-					output.printf(Locale.ENGLISH, "%2d  %1.2f  |  %2.4f %10.4f%n",
-							targetValue, p, lr.currentLearningRate(), logP);
-				}
-
-				// now update model
-				lr.train(targetValue, input);
-				return true;
-			}
-		}, passes);
-		
-		output.printf(Locale.ENGLISH, "%s %n", lr.getBeta().toString());
-		try (DataOutputStream modelOutput = new DataOutputStream(new FileOutputStream("D:/bigdata/data/lrParam.txt"))) {
-			lr.write(modelOutput);
+		InputStream input = null;
+		try {
+			input = new FileInputStream(PREDICT_DIR);
+			DataInput in = new DataInputStream(input);
+			lr.readFields(in);
+			input.close();
 		} catch (Exception e) {
 			e.printStackTrace();
+			System.out.println("load model param file failed!");
+		} 
+		
+		evalModel(lr, PREDICT_DIR);
+	}
+	
+	public static void evalModel(OnlineLogisticRegression lr, String inputDir){
+		
+		if(!loadConfigFile("./config.properties")){
+			if(!loadConfigFile("./config/config.properties")){
+				System.out.println("load config file error");
+				return;
+			}
 		}
 		
 		Integer[] res = {0, 0, 0, 0};//int all = 0, lost = 0, preLost = 0, right = 0;
 		
+		File dir = new File(inputDir);
+		File[] files = dir.listFiles();
 		analysisFiles(files, new LineHandler(){
-			int i = 0;
+
 			@Override
 			public boolean handle(String line) {
-				i++;
-				if(i<=half)
-					return false;
 				Vector input = new RandomAccessSparseVector(numFeatures);
 				int targetValue;
 				try {
@@ -164,9 +185,63 @@ public class LogisticRegressionTrain
 		double rightRate = (double) res[3] / res[0];
 		output.printf(Locale.ENGLISH, "cover rate:%2.4f   right rate:%2.4f  1cnt:%d  0cnt:%d %n"
 				, coverRate, rightRate, res[1], res[0]-res[1]);
-
 	}
 	
+	public static void trainModel(){
+		if(!loadConfigFile("./config.properties")){
+			if(!loadConfigFile("./config/config.properties")){
+				System.out.println("load config file error");
+				return;
+			}
+		}
+		
+		OnlineLogisticRegression lr = new OnlineLogisticRegression(2, numFeatures, new L1());
+		lr.lambda(1e-4);// 先验分布的加权因子
+		lr.learningRate(50);// 1e-3
+		lr.alpha(1 - 1.0e-3);// 学习率的指数衰减率
+
+		File dir = new File(SAMPLE_DIR);
+		File[] files = dir.listFiles();
+
+		analysisFiles(files, new LineHandler(){
+
+			@Override
+			public boolean handle(String line) {
+			
+				Vector input = new RandomAccessSparseVector(numFeatures);
+				int targetValue;
+				try {
+					targetValue = parseLine(line, input);
+				} catch (Exception e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+					return false;
+				}
+				
+				if (scores) {
+					// check performance while this is still news
+					double logP = lr.logLikelihood(targetValue, input);
+					double p = lr.classifyScalar(input);
+					output.printf(Locale.ENGLISH, "%2d  %1.2f  |  %2.4f %10.4f%n",
+							targetValue, p, lr.currentLearningRate(), logP);
+				}
+
+				// now update model
+				lr.train(targetValue, input);
+				return true;
+			}
+		}, TARIN_PASSES);
+		
+		output.printf(Locale.ENGLISH, "%s %n", lr.getBeta().toString());
+		try (DataOutputStream modelOutput = new DataOutputStream(new FileOutputStream(MODEL_PARAM_FILE))) {
+			lr.write(modelOutput);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		
+		evalModel(lr, SAMPLE_DIR);
+	}
+
 	private static void analysisFiles(File[] files, LineHandler handler){
 		analysisFiles(files, handler, 1);
 	}
@@ -199,4 +274,16 @@ public class LogisticRegressionTrain
 		}// for pass
 	}
 
+	public static void main(String[] args) {
+		if(args.length >= 1){
+			if(args[0].equals("train"))
+				trainModel();
+			else 
+				evalModel();
+		} else {
+			trainModel();
+			evalModel();
+		}
+
+	}
 }
