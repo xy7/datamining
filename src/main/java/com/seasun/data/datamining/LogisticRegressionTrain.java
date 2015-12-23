@@ -105,6 +105,7 @@ public class LogisticRegressionTrain{
 	    SAMPLE_DIR = replaceStringProp(props, "sample_dir", SAMPLE_DIR);
 	    TARIN_PASSES = Integer.parseInt( replaceStringProp(props, "train_passes", Integer.toString(TARIN_PASSES) ) );
 	    PREDICT_DIR = replaceStringProp(props, "predict_dir", PREDICT_DIR);
+	    scores = Boolean.parseBoolean(replaceStringProp(props, "scores", Boolean.toString(scores)) );
   
 	    loadFile = true;
 	    return true;
@@ -250,6 +251,10 @@ public class LogisticRegressionTrain{
 			int all = 0;
 			int suc = 0;
 			for (File file : files) {
+				
+				if(!file.isFile())
+					continue;
+				
 				LineIterator it = null;
 				try {
 					it = FileUtils.lineIterator(file, "UTF-8");
