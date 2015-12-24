@@ -47,7 +47,7 @@ public class LogisticRegressionTrain{
 		featureVector.setQuick(0, 1.0);//填充常量 k0
 		List<String> values = Arrays.asList(line.split(COLUMN_SPLIT));
 		if(values.size() < index[index.length-1] + 1)
-			throw new Exception("parse error, columns size to small: " + values.size() + " line: " + line);
+			throw new Exception("parse error, columns size to small: " + values.size());
 		
 		for (int i = 0; i < index.length; i++) {
 			String s = values.get(index[i]);
@@ -212,8 +212,7 @@ public class LogisticRegressionTrain{
 				try {
 					targetValue = parseLine(line, input);
 				} catch (Exception e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
+					//e.printStackTrace();
 					return false;
 				}
 				
@@ -251,7 +250,8 @@ public class LogisticRegressionTrain{
 			int all = 0;
 			int suc = 0;
 			for (File file : files) {
-				
+				if(file.getName().endsWith("crc"))
+					continue;
 				if(file.isDirectory())
 					continue;
 				
