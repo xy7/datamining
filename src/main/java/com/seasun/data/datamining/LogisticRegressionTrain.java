@@ -56,7 +56,7 @@ public class LogisticRegressionTrain{
 			featureVector.setQuick(i + 1, Double.parseDouble(s));
 		}
 		
-		int res = Integer.parseInt(values.get(65));
+		int res = Integer.parseInt(values.get(values.size()-1));
 		if(res !=0 && res != 1){
 			System.out.println("parse error: " + line);
 			throw new Exception("parse error, res not in (0,1)");
