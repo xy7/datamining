@@ -43,11 +43,11 @@ public class LogisticRegressionTrain{
 	private static int[] index;
 	private static int numFeatures;
 	
-	public static int parseLine(String line, Vector featureVector) throws Exception {
+	private static int parseLine(String line, Vector featureVector) throws Exception {
 		featureVector.setQuick(0, 1.0);//填充常量 k0
 		List<String> values = Arrays.asList(line.split(COLUMN_SPLIT));
 		if(values.size() < index[index.length-1] + 1)
-			throw new Exception("parse error, columns size to small: " + values.size());
+			throw new Exception("parse error, columns size to small: " + values.size() + " line: " + line);
 		
 		for (int i = 0; i < index.length; i++) {
 			String s = values.get(index[i]);
