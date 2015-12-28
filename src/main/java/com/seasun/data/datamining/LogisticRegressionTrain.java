@@ -145,7 +145,7 @@ public class LogisticRegressionTrain{
 			}
 		}
 		
-		Integer[] res = {0, 0, 0, 0};//int all = 0, lost = 0, preLost = 0, right = 0;
+		Integer[] res = {0, 0, 0, 0};//abcd;
 		
 		File dir = new File(inputDir);
 		File[] files = dir.listFiles();
@@ -167,23 +167,32 @@ public class LogisticRegressionTrain{
 				int predictValue = score > 0.5 ? 1 : 0;
 				res[0]++;
 				if (targetValue == 1) {
-					res[1]++;
 					if (predictValue == 1) {
-						res[2]++;
+						res[0]++; //流失用户预测正确
+					} else {
+						res[2]++; //流失用户预测错误
 					}
-				}
-
-				if (predictValue == targetValue) {
-					res[3]++;
+				} else {
+					if (predictValue == 1) {
+						res[1]++; //非流失用户预测错误
+					} else {
+						res[3]++; //非流失用户预测正确
+					}
 				}
 				return true;
 			}
 		});
+		
+		int all = res[0] + res[1] + res[2] + res[3];
+		output.printf("result matrix: lostcnt:%d	remaincnt:%d%n", res[0]+res[2], res[1]+res[3]);
+		output.printf("A:%2.4f	B:%2.4f %n", (double)res[0]/all, (double)res[1]/all);
+		output.printf("C:%2.4f	D:%2.4f %n", (double)res[2]/all, (double)res[3]/all);
 
-		double coverRate = (double) res[2] / res[1];
-		double rightRate = (double) res[3] / res[0];
-		output.printf(Locale.ENGLISH, "cover rate:%2.4f   right rate:%2.4f  1cnt:%d  0cnt:%d %n"
-				, coverRate, rightRate, res[1], res[0]-res[1]);
+		double coverRate = (double) res[0]/(res[0]+res[2]);//覆盖率
+		double rightRate = (double) (res[0]+res[3])/all;//正确率
+		double hitRate = (double) res[0]/(res[0]+res[3]);//命中率
+		output.printf(Locale.ENGLISH, "cover rate:%2.4f   right rate:%2.4f   hit rate:%2.4f  %n"
+				, coverRate, rightRate, hitRate);
 	}
 	
 	public static void trainModel(){
