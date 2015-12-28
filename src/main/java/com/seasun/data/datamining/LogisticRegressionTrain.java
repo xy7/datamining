@@ -190,7 +190,7 @@ public class LogisticRegressionTrain{
 
 		double coverRate = (double) res[0]/(res[0]+res[2]);//覆盖率
 		double rightRate = (double) (res[0]+res[3])/all;//正确率
-		double hitRate = (double) res[0]/(res[0]+res[3]);//命中率
+		double hitRate = (double) res[0]/(res[0]+res[1]);//命中率
 		output.printf(Locale.ENGLISH, "cover rate:%2.4f   right rate:%2.4f   hit rate:%2.4f  %n"
 				, coverRate, rightRate, hitRate);
 	}
