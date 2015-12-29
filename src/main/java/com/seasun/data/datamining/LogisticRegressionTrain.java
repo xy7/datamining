@@ -165,7 +165,7 @@ public class LogisticRegressionTrain{
 				
 				double score = lr.classifyScalar(input);
 				int predictValue = score > 0.5 ? 1 : 0;
-				res[0]++;
+
 				if (targetValue == 1) {
 					if (predictValue == 1) {
 						res[0]++; //流失用户预测正确
