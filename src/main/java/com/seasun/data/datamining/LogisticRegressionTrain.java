@@ -19,7 +19,7 @@ import java.util.Properties;
 import org.apache.commons.io.Charsets;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.LineIterator;
-import org.apache.mahout.classifier.sgd.L1;
+import org.apache.mahout.classifier.sgd.L2;
 import org.apache.mahout.classifier.sgd.OnlineLogisticRegression;
 import org.apache.mahout.math.RandomAccessSparseVector;
 import org.apache.mahout.math.Vector;
@@ -206,7 +206,7 @@ public class LogisticRegressionTrain{
 			}
 		}
 		
-		OnlineLogisticRegression lr = new OnlineLogisticRegression(2, numFeatures, new L1());
+		OnlineLogisticRegression lr = new OnlineLogisticRegression(2, numFeatures, new L2());
 		lr.lambda(1e-4);// 先验分布的加权因子
 		lr.learningRate(50);// 1e-3
 		lr.alpha(1 - 1.0e-3);// 学习率的指数衰减率
