@@ -30,6 +30,7 @@ import org.apache.mahout.math.Vector;
  */
 public class LogisticRegressionTrain{
 	
+	private static double CLASSIFY_VALUE = 0.5;
 	private static boolean loadFile = false;
 	private static String SAMPLE_DIR = "./fig_app_user/sample/";
 	private static int TARIN_PASSES = 5;
@@ -107,6 +108,7 @@ public class LogisticRegressionTrain{
 	    TARIN_PASSES = Integer.parseInt( replaceStringProp(props, "train_passes", Integer.toString(TARIN_PASSES) ) );
 	    PREDICT_DIR = replaceStringProp(props, "predict_dir", PREDICT_DIR);
 	    scores = Boolean.parseBoolean(replaceStringProp(props, "scores", Boolean.toString(scores)) );
+	    CLASSIFY_VALUE = Double.parseDouble(replaceStringProp(props, "classify_value", Double.toString(CLASSIFY_VALUE)) );
   
 	    loadFile = true;
 	    return true;
@@ -165,7 +167,7 @@ public class LogisticRegressionTrain{
 				}
 				
 				double score = lr.classifyScalar(input);
-				int predictValue = score > 0.5 ? 1 : 0;
+				int predictValue = score > CLASSIFY_VALUE ? 1 : 0;
 
 				if (targetValue == 1) {
 					if (predictValue == 1) {
