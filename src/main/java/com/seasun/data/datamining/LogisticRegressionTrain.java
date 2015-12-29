@@ -95,9 +95,10 @@ public class LogisticRegressionTrain{
 	    		index[i] = Integer.parseInt(indexArray[i].trim());
 	    	}
 	    	numFeatures = index.length + 1;
-	    	System.out.println("index:");
+	    	System.out.print("index:");
 		    for(int i:index)
-		    	System.out.println(i);
+		    	System.out.print(", " + i);
+		    System.out.println("");
 	    }
 	    
 	    COLUMN_SPLIT = replaceStringProp(props, "column_split", COLUMN_SPLIT);
