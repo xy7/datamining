@@ -11,9 +11,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
-import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -168,9 +169,19 @@ public class LogisticRegressionTrain{
 		
 		double avgRes[] = {0.0, 0.0, 0.0};
 		double maxRes[] = {0.0, 0.0, 0.0};
-		for(Map.Entry<String, double[]> e:resMap.entrySet()){
-			String name = e.getKey();
-			double[] res = e.getValue();
+		List<String> dates = new LinkedList<>(resMap.keySet());
+		dates.sort(new Comparator<String>(){
+
+			@Override
+			public int compare(String o1, String o2) {
+				// TODO Auto-generated method stub
+				return o1.compareTo(o2);
+			}
+			
+		});
+		
+		for(String name:dates){
+			double[] res = resMap.get(name);
 			output.printf(Locale.ENGLISH, "dir name:%s	cover rate:%2.4f   right rate:%2.4f   hit rate:%2.4f  %n"
 					, name , res[0], res[1], res[2]);
 			
