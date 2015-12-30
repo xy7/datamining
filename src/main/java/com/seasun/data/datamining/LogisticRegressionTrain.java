@@ -19,7 +19,7 @@ import java.util.Properties;
 import org.apache.commons.io.Charsets;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.LineIterator;
-import org.apache.mahout.classifier.sgd.L2;
+import org.apache.mahout.classifier.sgd.L1;
 import org.apache.mahout.classifier.sgd.OnlineLogisticRegression;
 import org.apache.mahout.math.RandomAccessSparseVector;
 import org.apache.mahout.math.Vector;
@@ -206,10 +206,10 @@ public class LogisticRegressionTrain{
 			}
 		}
 		
-		OnlineLogisticRegression lr = new OnlineLogisticRegression(2, numFeatures, new L2());
+		OnlineLogisticRegression lr = new OnlineLogisticRegression(2, numFeatures, new L1());
 		lr.lambda(1e-4);// 先验分布的加权因子
-		lr.learningRate(50);// 1e-3
-		lr.alpha(1 - 1.0e-3);// 学习率的指数衰减率
+		lr.learningRate(1e-1);// 1e-3
+		lr.alpha(1 - 1.0e-5);// 学习率的指数衰减率,步长
 
 		File dir = new File(SAMPLE_DIR);
 		File[] files = dir.listFiles();
@@ -232,7 +232,7 @@ public class LogisticRegressionTrain{
 					// check performance while this is still news
 					double logP = lr.logLikelihood(targetValue, input);
 					double p = lr.classifyScalar(input);
-					output.printf(Locale.ENGLISH, "%2d  %1.2f  |  %2.4f %10.4f%n",
+					output.printf(Locale.ENGLISH, "%2d  %1.4f  |  %2.6f %10.4f%n",
 							targetValue, p, lr.currentLearningRate(), logP);
 				}
 
