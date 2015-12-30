@@ -17,7 +17,7 @@ public class LogisticRegressionTrainTest {
 	@Test
 	public void genSql(){
 		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-		LocalDate ld = LocalDate.parse("2015-11-15");
+		LocalDate ld = LocalDate.parse("2015-11-01");
 		
 		String sql = "INSERT OVERWRITE LOCAL DIRECTORY '/tmp/fig_app_user/"+ ld.format(formatter) +"/'\n"
 				+ "select a.*, (case when b.account_id is null then 1 else 0 end)\n"

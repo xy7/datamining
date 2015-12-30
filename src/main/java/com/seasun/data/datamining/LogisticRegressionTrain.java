@@ -11,9 +11,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Properties;
 
 import org.apache.commons.io.Charsets;
@@ -122,7 +125,7 @@ public class LogisticRegressionTrain{
 		   return target;
 	}
 	
-	public static void evalModel() {
+	private static OnlineLogisticRegression loadModelParam() {
 		OnlineLogisticRegression lr = new OnlineLogisticRegression();
 		
 		InputStream input = null;
@@ -134,10 +137,62 @@ public class LogisticRegressionTrain{
 		} catch (Exception e) {
 			e.printStackTrace();
 			System.out.println("load model param file failed!");
-		} 
+		}
+		return lr;
+	}
+	
+	public static void evalModel() {
+		OnlineLogisticRegression lr = loadModelParam(); 
 		
 		evalModel(lr, PREDICT_DIR);
 	}
+	
+	public static void evalModelMutiDir(){
+		if(!loadConfigFile("./config.properties")){
+			if(!loadConfigFile("./config/config.properties")){
+				System.out.println("load config file error");
+				return;
+			}
+		}
+		
+		OnlineLogisticRegression lr = loadModelParam();
+		
+		File dir = new File(PREDICT_DIR);
+		File[] files = dir.listFiles();
+		for(File file:files){
+			if(file.isDirectory()){
+				System.out.println("dir: " + file.getName());
+				evalModel(lr, file.getAbsolutePath());
+			}
+		}
+		
+		double avgRes[] = {0.0, 0.0, 0.0};
+		double maxRes[] = {0.0, 0.0, 0.0};
+		for(Map.Entry<String, double[]> e:resMap.entrySet()){
+			String name = e.getKey();
+			double[] res = e.getValue();
+			output.printf(Locale.ENGLISH, "dir name:%s	cover rate:%2.4f   right rate:%2.4f   hit rate:%2.4f  %n"
+					, name , res[0], res[1], res[2]);
+			
+			for(int i=0;i<3;i++){
+				avgRes[i] += res[i];
+				if(res[i] > maxRes[i])
+					maxRes[i] = res[i];
+			}
+		}//for map
+		
+		int n = resMap.size();
+		for(int i=0;i<3;i++){
+			avgRes[i] /= n;
+		}
+		
+		output.printf(Locale.ENGLISH, "avg	cover rate:%2.4f   right rate:%2.4f   hit rate:%2.4f  %n"
+				, avgRes[0], avgRes[1], avgRes[2]);
+		output.printf(Locale.ENGLISH, "max	cover rate:%2.4f   right rate:%2.4f   hit rate:%2.4f  %n"
+				, maxRes[0], maxRes[1], maxRes[2]);
+	}
+	
+	private static Map<String, double[]> resMap = new HashMap<>();
 	
 	public static void evalModel(OnlineLogisticRegression lr, String inputDir){
 		
@@ -196,6 +251,9 @@ public class LogisticRegressionTrain{
 		double hitRate = (double) res[0]/(res[0]+res[1]);//命中率
 		output.printf(Locale.ENGLISH, "cover rate:%2.4f   right rate:%2.4f   hit rate:%2.4f  %n"
 				, coverRate, rightRate, hitRate);
+		
+		double[] tmp = {coverRate, rightRate, hitRate};
+		resMap.put(dir.getName(), tmp);
 	}
 	
 	public static void trainModel(){
@@ -293,8 +351,8 @@ public class LogisticRegressionTrain{
 		if(args.length >= 1){
 			if(args[0].equals("train"))
 				trainModel();
-			else 
-				evalModel();
+			else if(args[0].equals("predict"))
+				evalModelMutiDir();
 		} else {
 			trainModel();
 			evalModel();
