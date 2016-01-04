@@ -142,23 +142,18 @@ public class LogisticRegressionTrain{
 		return lr;
 	}
 	
+	
 	public static void evalModel() {
 		OnlineLogisticRegression lr = loadModelParam(); 
 		
 		evalModel(lr, PREDICT_DIR);
 	}
 	
-	public static void evalModelMutiDir(){
-		if(!loadConfigFile("./config.properties")){
-			if(!loadConfigFile("./config/config.properties")){
-				System.out.println("load config file error");
-				return;
-			}
-		}
-		
+	public static void evalModelMutiDir(String dirStr){
+	
 		OnlineLogisticRegression lr = loadModelParam();
 		
-		File dir = new File(PREDICT_DIR);
+		File dir = new File(dirStr);
 		File[] files = dir.listFiles();
 		for(File file:files){
 			if(file.isDirectory()){
@@ -205,14 +200,7 @@ public class LogisticRegressionTrain{
 	
 	private static Map<String, double[]> resMap = new HashMap<>();
 	
-	public static void evalModel(OnlineLogisticRegression lr, String inputDir){
-		
-		if(!loadConfigFile("./config.properties")){
-			if(!loadConfigFile("./config/config.properties")){
-				System.out.println("load config file error");
-				return;
-			}
-		}
+	private static void evalModel(OnlineLogisticRegression lr, String inputDir){
 		
 		Integer[] res = {0, 0, 0, 0};//abcd;
 		
@@ -267,21 +255,35 @@ public class LogisticRegressionTrain{
 		resMap.put(dir.getName(), tmp);
 	}
 	
-	public static void trainModel(){
-		if(!loadConfigFile("./config.properties")){
-			if(!loadConfigFile("./config/config.properties")){
-				System.out.println("load config file error");
-				return;
+	public static void trainModelMutiDir(){
+		File dirPar = new File(SAMPLE_DIR);
+		File[] dirs = dirPar.listFiles();
+		List<File> files = new LinkedList<>();
+		for(File dir:dirs){
+			if(dir.isDirectory()){
+				System.out.println("dir: " + dir.getName());
+				files.addAll( Arrays.asList( dir.listFiles() ) );
 			}
 		}
 		
+		OnlineLogisticRegression lr = trainFiles(files.toArray(new File[0]));
+		evalModelMutiDir(SAMPLE_DIR);
+	}
+	
+	public static void trainModel(){
+		File dir = new File(SAMPLE_DIR);
+		File[] files = dir.listFiles();
+		
+		OnlineLogisticRegression lr = trainFiles(files);
+		
+		evalModel(lr, SAMPLE_DIR);
+	}
+
+	private static OnlineLogisticRegression trainFiles(File[] files) {
 		OnlineLogisticRegression lr = new OnlineLogisticRegression(2, numFeatures, new L1());
 		lr.lambda(1e-4);// 先验分布的加权因子
 		lr.learningRate(1e-1);// 1e-3
 		lr.alpha(1 - 1.0e-5);// 学习率的指数衰减率,步长
-
-		File dir = new File(SAMPLE_DIR);
-		File[] files = dir.listFiles();
 
 		analysisFiles(files, new LineHandler(){
 
@@ -317,8 +319,7 @@ public class LogisticRegressionTrain{
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		
-		evalModel(lr, SAMPLE_DIR);
+		return lr;
 	}
 
 	private static void analysisFiles(File[] files, LineHandler handler){
@@ -359,11 +360,23 @@ public class LogisticRegressionTrain{
 	}
 
 	public static void main(String[] args) {
+		
+		if(!loadConfigFile("./config.properties")){
+			if(!loadConfigFile("./config/config.properties")){
+				System.out.println("load config file error");
+				return;
+			}
+		}
+		
 		if(args.length >= 1){
 			if(args[0].equals("train"))
 				trainModel();
 			else if(args[0].equals("predict"))
-				evalModelMutiDir();
+				evalModelMutiDir(PREDICT_DIR);
+			else if(args[0].equals("muti")){
+				trainModelMutiDir();
+				evalModelMutiDir(PREDICT_DIR);
+			}
 		} else {
 			trainModel();
 			evalModel();
