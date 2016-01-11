@@ -20,7 +20,7 @@ public class ReadHive {
         //String uri = "hdfs://xxxx:8020" + "/user/hive/warehouse/lib/col_iplib.txt";
 //        String uri = "hdfs://namenodem:50070/hive/warehouse/fig.db/lost_user/dt=2015-12-30/000000_0";
 //        String uri = "hdfs://namenodem:50070/hive/warehouse/fig.db/lost_user/dt=2015-12-30/000000_0";
-		String path = "/hive/warehouse/fig.db/lost_user/dt=2015-12-30/000000_0";
+		String path = "hdfs:/hive/warehouse/fig.db/lost_user/dt=2015-12-30/000000_0";
         FileSystem fs = null;
         FSDataInputStream in = null;
         BufferedReader br = null;
@@ -34,7 +34,7 @@ public class ReadHive {
                 String[] pars = readline.split("\001");
                 System.out.println(pars[1]);
                 counter++;
-            }
+            }	
         } catch (IOException e) {
         	e.printStackTrace();
             System.out.println(e.getMessage());
