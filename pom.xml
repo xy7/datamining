@@ -35,11 +35,13 @@
 			<groupId>org.apache.mahout</groupId>
 			<artifactId>mahout-core</artifactId>
 			<version>0.9</version>
+			
 		</dependency>
 		<dependency>
 			<groupId>org.apache.mahout</groupId>
 			<artifactId>mahout-examples</artifactId>
 			<version>0.11.0</version>
+			
 		</dependency>
 		<dependency>
 			<groupId>jdk.tools</groupId>
@@ -57,7 +59,7 @@
 	
 	<build>
 		<plugins>
- 			<plugin>
+ 			<!-- <plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-shade-plugin</artifactId>
 				<version>2.4</version>
@@ -77,7 +79,7 @@
 		        </configuration>
 					</execution>
 				</executions>
-			</plugin>
+			</plugin> -->
 			
 			<plugin> 
 				<groupId>org.apache.maven.plugins</groupId> 

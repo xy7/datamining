@@ -28,11 +28,9 @@ public class ReadHive {
             in = fs.open(new Path(path));
             br = new BufferedReader(new InputStreamReader(in));
             String readline;
-            int counter = 0;
-            while ((readline = br.readLine()) != null && counter <=10) {
+            while ((readline = br.readLine()) != null) {
                 String[] pars = readline.split("\001");
                 System.out.println(pars[1]);
-                counter++;
             }	
         } catch (IOException e) {
         	e.printStackTrace();
