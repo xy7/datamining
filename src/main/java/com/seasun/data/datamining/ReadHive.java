@@ -26,7 +26,7 @@ public class ReadHive {
         FSDataInputStream in = null;
         BufferedReader br = null;
         try {
-            fs = HadoopConfUtil.getFileSystem("hdfs:///", null);
+            fs = HadoopConfUtil.getFileSystem("hdfs:///namenodem:50070", null);
 //            fs = HadoopConfUtil.getFileSystem(null, null);
             in = fs.open(new Path(path));
             br = new BufferedReader(new InputStreamReader(in));
