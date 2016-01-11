@@ -34,6 +34,7 @@ public class ReadHive {
                 counter++;
             }
         } catch (IOException e) {
+        	e.printStackTrace();
             System.out.println(e.getMessage());
         } finally {
             IOUtils.closeStream(in);
