@@ -35,12 +35,12 @@
 			<groupId>org.apache.mahout</groupId>
 			<artifactId>mahout-core</artifactId>
 			<version>0.9</version>
-			<!-- <exclusions>  
+			<exclusions>  
 	      <exclusion>
 	      	<groupId>org.apache.hadoop</groupId> 
 	        <artifactId>hadoop-core</artifactId>  
 	      </exclusion>  
-      </exclusions> -->
+      </exclusions>
 		</dependency>
 		<!-- <dependency>
 			<groupId>org.apache.mahout</groupId>
