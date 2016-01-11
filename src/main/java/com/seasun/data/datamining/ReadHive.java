@@ -23,7 +23,7 @@ public class ReadHive {
         FSDataInputStream in = null;
         BufferedReader br = null;
         try {
-            fs = HadoopConfUtil.getFileSystem(uri, "hadoop");
+            fs = HadoopConfUtil.getFileSystem(uri, null);
             in = fs.open(new Path(uri));
             br = new BufferedReader(new InputStreamReader(in));
             String readline;
