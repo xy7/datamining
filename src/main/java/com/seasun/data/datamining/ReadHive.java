@@ -18,7 +18,7 @@ public class ReadHive {
 	public static void main(String[] args) {
 
         //String uri = "hdfs://xxxx:8020" + "/user/hive/warehouse/lib/col_iplib.txt";
-        String uri = "hdfs://namenodem:8020/hive/warehouse/fig.db/lost_user/dt=2015-12-30/000000_0";
+        String uri = "hdfs://namenodem:50070/hive/warehouse/fig.db/lost_user/dt=2015-12-30/000000_0";
         FileSystem fs = null;
         FSDataInputStream in = null;
         BufferedReader br = null;
