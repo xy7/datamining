@@ -129,8 +129,8 @@ public class ReadHive{
 					// now update model
 					lr.train(targetValue, input);
 				} catch (Exception e) {
-					e.printStackTrace();
-					System.out.println(e);
+					//e.printStackTrace();
+					//System.out.println(e);
 					return false;
 				}
 		        return true;
@@ -192,8 +192,8 @@ public class ReadHive{
 					lost.put(accountId, targetValue);
 					return true;
 				} catch(Exception e) {
-					e.printStackTrace();
-					System.out.println(e);
+					//e.printStackTrace();
+					//System.out.println(e);
 					return false;
 				}
 			}
