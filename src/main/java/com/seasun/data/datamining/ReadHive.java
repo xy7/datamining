@@ -124,6 +124,7 @@ public class ReadHive{
 			public boolean handle(String line) {
 				try{
 					String[] cols = line.split(LogisticRegressionTrain.COLUMN_SPLIT);
+					System.out.println("line column size: " + cols.length);
 			    	String accountId = cols[1];
 					
 					String appId = cols[0];
