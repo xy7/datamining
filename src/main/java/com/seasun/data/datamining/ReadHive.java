@@ -37,7 +37,7 @@ public class ReadHive{
 	private static CompressionCodecFactory factory = new CompressionCodecFactory(conf); 
 	private static FileSystem hdfs;
 	private static DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-	private static String table = "/hive/warehouse/fig.db/lost_user/dt=";
+	private static String table = "/hive/warehouse/fig.db/fig_app_user/dt=";
 	
 	private static PrintWriter output = new PrintWriter(new OutputStreamWriter(System.out, Charsets.UTF_8), true);
 	
