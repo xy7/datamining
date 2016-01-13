@@ -34,21 +34,21 @@ import org.apache.mahout.math.Vector;
  */
 public class LogisticRegressionTrain{
 	
-	private static double CLASSIFY_VALUE = 0.5;
-	private static boolean loadFile = false;
-	private static String SAMPLE_DIR = "./fig_app_user/sample/";
-	private static int TARIN_PASSES = 5;
-	private static String PREDICT_DIR = "./fig_app_user/predict/";
-	private static String MODEL_PARAM_FILE = "lrParam.txt";
-	private static String COLUMN_SPLIT = "\1";
-	private static boolean scores = true;
-	private static PrintWriter output = new PrintWriter(new OutputStreamWriter(System.out, Charsets.UTF_8), true);
+	public static double CLASSIFY_VALUE = 0.5;
+	public static boolean loadFile = false;
+	public static String SAMPLE_DIR = "./fig_app_user/sample/";
+	public static int TARIN_PASSES = 5;
+	public static String PREDICT_DIR = "./fig_app_user/predict/";
+	public static String MODEL_PARAM_FILE = "lrParam.txt";
+	public static String COLUMN_SPLIT = "\1";
+	public static boolean scores = true;
+	public static PrintWriter output = new PrintWriter(new OutputStreamWriter(System.out, Charsets.UTF_8), true);
 
 	//role_level first_login_cnt first_online_dur total_recharge total_recharge_cnt last7_login_cnt last7_login_daycnt last7_online_dur
-	private static int[] index;
-	private static int numFeatures;
+	public static int[] index;
+	public static int numFeatures;
 	
-	private static int parseLine(String line, Vector featureVector) throws Exception {
+	public static int parseLine(String line, Vector featureVector) throws Exception {
 		featureVector.setQuick(0, 1.0);//填充常量 k0
 		List<String> values = Arrays.asList(line.split(COLUMN_SPLIT));
 		if(values.size() < index[index.length-1] + 1)
