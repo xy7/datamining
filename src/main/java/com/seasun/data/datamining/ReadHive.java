@@ -116,13 +116,13 @@ public class ReadHive{
 	
 	private static List<String> lineSplit(String line){
 		String[] cols = line.split(LogisticRegressionTrain.COLUMN_SPLIT);
-		List<String> res = new ArrayList<>();
+//		List<String> res = new ArrayList<>();
+//		
+//		for(String col:cols){
+//			res.addAll(Arrays.asList(col.split(",") ) ); 
+//		}
 		
-		for(String col:cols){
-			res.addAll(Arrays.asList(col.split(",") ) ); 
-		}
-		
-		return res;
+		return Arrays.asList(cols);
 	}
 	
 	private static void getTargetValue(LocalDate ld) throws Exception{
@@ -136,7 +136,7 @@ public class ReadHive{
 			public boolean handle(String line) {
 				try{
 					List<String> cols = lineSplit(line);
-					System.out.println("line column size: " + cols.size());
+					System.out.println("line column size: " + cols.size() + "  values: " + cols);
 			    	String accountId = cols.get(1);
 					
 					String appId = cols.get(0);
