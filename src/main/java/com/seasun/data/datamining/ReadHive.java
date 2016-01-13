@@ -44,6 +44,30 @@ public class ReadHive{
 	
 	private static Map<String, Integer> lost = new HashMap<>();
 	private static OnlineLogisticRegression lr;
+	private static int numFeatures;
+	
+	private static List<String> trainIndex = null;
+	static {
+		trainIndex = Arrays.asList(new String[]{"role_level"
+				, "last1_login_cnt"
+				, "last2_login_cnt"
+				, "last3_login_cnt"
+				, "last4_login_cnt"
+				, "last5_login_cnt"
+				, "last6_login_cnt"
+				, "last7_login_cnt"
+				, "last14_login_cnt"
+				, "last1_login_daycnt"
+				, "last2_login_daycnt"
+				, "last3_login_daycnt"
+				, "last4_login_daycnt"
+				, "last5_login_daycnt"
+				, "last6_login_daycnt"
+				, "last7_login_daycnt"
+				, "last14_login_daycnt"});
+		
+		numFeatures = trainIndex.size() + 2;
+	}
 	
 	static {
 		try {
@@ -52,7 +76,7 @@ public class ReadHive{
 			e.printStackTrace();
 		}
 		
-		lr = new OnlineLogisticRegression(2, LogisticRegressionTrain.numFeatures, new L1());
+		lr = new OnlineLogisticRegression(2, numFeatures, new L1());
 		lr.lambda(1e-4);// 先验分布的加权因子
 		lr.learningRate(1e-1);// 1e-3
 		lr.alpha(1 - 1.0e-5);// 学习率的指数衰减率,步长
@@ -88,9 +112,9 @@ public class ReadHive{
 			@Override
 			public boolean handle(String line) {
 				String accountId;
-		        Vector input = new RandomAccessSparseVector(LogisticRegressionTrain.numFeatures);
+		        Vector input = new RandomAccessSparseVector(numFeatures);
 		        try {
-		        	accountId = parseLine(line, input);
+		        	accountId = parseLine(line, input, ld);
 		        	if(accountId == null)
 		        		return false;
 		        	int targetValue = lost.get(accountId);
@@ -113,16 +137,35 @@ public class ReadHive{
 			}
 		});
 	}
-	
-	private static List<String> lineSplit(String line){
-		String[] cols = line.split(LogisticRegressionTrain.COLUMN_SPLIT);
-//		List<String> res = new ArrayList<>();
-//		
-//		for(String col:cols){
-//			res.addAll(Arrays.asList(col.split(",") ) ); 
-//		}
+
+	private static Map<String, String> lineSplit(String line){
+
+		String[] cols = line.split("\1");
 		
-		return Arrays.asList(cols);
+		Map<String, String> res = new HashMap<>();
+		res.put("app_id",		cols[0]);
+		res.put("account_id",	cols[1]);
+		res.put("device_id",	cols[2]);
+		res.put("mac",			cols[3]);
+		
+		String mapStr		= cols[4];
+		String mapInt		= cols[5];
+		
+		res.putAll(parse2map(mapStr));
+		
+		res.putAll(parse2map(mapInt));
+
+		return res;
+	}
+
+	private static Map<String, String> parse2map(String mapInt) {
+		String[] intCols = mapInt.split("\2");
+		Map<String, String> res = new HashMap<>();
+		for(String col:intCols){
+			String[] kv = col.split("\3");
+			res.put(kv[0], kv[1]);
+		}
+		return res;
 	}
 	
 	private static void getTargetValue(LocalDate ld) throws Exception{
@@ -135,15 +178,15 @@ public class ReadHive{
 			@Override
 			public boolean handle(String line) {
 				try{
-					List<String> cols = lineSplit(line);
+					Map<String, String> cols = lineSplit(line);
 					System.out.println("line column size: " + cols.size() + "  values: " + cols);
-			    	String accountId = cols.get(1);
+			    	String accountId = cols.get("account_id");
 					
-					String appId = cols.get(0);
+					String appId = cols.get("app_id");
 					if(!appId.equals(APPID))
 						return true;
 					
-					int last7LoginDaycnt = Integer.parseInt(cols.get(34) );
+					int last7LoginDaycnt = Integer.parseInt(cols.get("last7_login_daycnt") );
 					int targetValue = last7LoginDaycnt>0?1:0;
 					lost.put(accountId, targetValue);
 					return true;
@@ -195,28 +238,43 @@ public class ReadHive{
 		}// for pass
 	}
 	
-	//返回帐号id
-	public static String parseLine(String line, Vector featureVector) throws Exception {
-		featureVector.setQuick(0, 1.0);//填充常量 k0
-		int[] index = LogisticRegressionTrain.index;
-		List<String> values = lineSplit(line);
-		if(values.size() < index[index.length-1] + 1)
-			throw new Exception("parse error, columns size to small: " + values.size());
+	public static int dayDiff(LocalDate day1, LocalDate day2){
+
+		int i = 0;
+		for(LocalDate ld=day1; !ld.isAfter(day2); ld=ld.plusDays(1)){
+			i++;
+		}
+		return i;
+	}
+
+	public static String parseLine(String line, Vector featureVector, LocalDate ld) throws Exception {
 		
-		for (int i = 0; i < index.length; i++) {
-			String s = values.get(index[i]);
+		featureVector.setQuick(0, 1.0);//填充常量 k0
+		
+		Map<String, String> cols = lineSplit(line);
+		if(cols.size() < 60)
+			throw new Exception("parse error, columns size to small: " + cols.size());
+		
+		int i = 0;
+		for(String k:trainIndex){
+			String s = cols.get(k);
 			if(s.equals("\\N"))//null值替换为空值
 				s = "0";
 			featureVector.setQuick(i + 1, Double.parseDouble(s));
+			i++;
 		}
 		
-		String accountId = values.get(1);
+		LocalDate firstLoginDate = LocalDate.parse(cols.get("first_login_date") );
+		int uptodate = dayDiff(firstLoginDate, ld);
+		featureVector.setQuick(i, uptodate);
 		
-		String appId = values.get(0);
+		String accountId = cols.get("account_id");
+		
+		String appId = cols.get("app_id");
 		if(!appId.equals(APPID))
 			return null;
 		
-		return accountId;
+		return accountId;//返回帐号id
 	}
 
 
