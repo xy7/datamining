@@ -90,8 +90,8 @@ public class ReadHive{
 			}
 		}
 	
-		LocalDate start = LocalDate.parse("2015-08-01");
-		LocalDate end   = LocalDate.parse("2015-08-01");
+		LocalDate start = LocalDate.parse("2015-11-01");
+		LocalDate end   = LocalDate.parse("2015-11-01");
 		for(int i=0;i<LogisticRegressionTrain.TARIN_PASSES;i++){
 			output.printf(Locale.ENGLISH, "--------pass: %2d ---------%n", i);
 			for(LocalDate ld=start; !ld.isAfter(end); ld=ld.plusDays(1) ){
@@ -191,7 +191,7 @@ public class ReadHive{
 					int targetValue = last7LoginDaycnt>0?1:0;
 					lost.put(accountId, targetValue);
 					return true;
-				} catch(Exception e) {
+				} catch(ArrayIndexOutOfBoundsException e) {
 					//e.printStackTrace();
 					//System.out.println(e);
 					return false;
@@ -250,13 +250,23 @@ public class ReadHive{
 		return i;
 	}
 
-	public static String parseLine(String line, Vector featureVector, LocalDate ld) throws Exception {
+	public static String parseLine(String line, Vector featureVector, LocalDate ld){
 		
 		featureVector.setQuick(0, 1.0);//填充常量 k0
 		
-		Map<String, String> cols = lineSplit(line);
-		if(cols.size() < 60)
-			throw new Exception("parse error, columns size to small: " + cols.size());
+		Map<String, String> cols;
+		try {
+			cols = lineSplit(line);
+			if(cols.size() < 60){
+				//throw new Exception("parse error, columns size to small: " + cols.size());
+				return null;
+			}
+		} catch (ArrayIndexOutOfBoundsException e) {
+			// TODO Auto-generated catch block
+			//e.printStackTrace();
+			return null;
+		}
+		
 		
 		int i = 0;
 		for(String k:trainIndex){
@@ -268,7 +278,17 @@ public class ReadHive{
 		}
 		
 		LocalDate firstLoginDate = LocalDate.parse(cols.get("first_login_date") );
+		
+		//+ "and first_login_date <= '"+ ld.minusDays(13).format(formatter) +"' \n"
+		//+ "and last7_login_daycnt >= 1\n"
+		
+		int last7LoginDaycnt = Integer.parseInt( cols.get("last7_login_daycnt") );
+		if(last7LoginDaycnt < 1)
+			return null;
 		int uptodate = dayDiff(firstLoginDate, ld);
+		if(uptodate <= 14)
+			return null;
+				
 		featureVector.setQuick(i, uptodate);
 		
 		String accountId = cols.get("account_id");
