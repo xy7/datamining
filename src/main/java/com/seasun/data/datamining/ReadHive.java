@@ -67,9 +67,7 @@ public class ReadHive{
 				, "last14_login_daycnt"});
 		
 		numFeatures = trainIndex.size() + 2;
-	}
 	
-	static {
 		try {
 			hdfs = HadoopConfUtil.getFileSystem(null, null);
 		} catch (IOException e) {
@@ -140,7 +138,7 @@ public class ReadHive{
 		});
 	}
 
-	private static Map<String, String> lineSplit(String line){
+	private static Map<String, String> lineSplit(String line) throws ArrayIndexOutOfBoundsException{
 
 		String[] cols = line.split("\1");
 		
@@ -160,11 +158,11 @@ public class ReadHive{
 		return res;
 	}
 
-	private static Map<String, String> parse2map(String mapInt) {
+	private static Map<String, String> parse2map(String mapInt) throws ArrayIndexOutOfBoundsException {
 		String[] intCols = mapInt.split("\2");
 		Map<String, String> res = new HashMap<>();
 		for(String col:intCols){
-			System.out.println("167: " + col);
+			//System.out.println("167: " + col);
 			String[] kv = col.split("\3");
 			res.put(kv[0], kv[1]);
 		}
