@@ -74,6 +74,7 @@ public class ReadHive{
 			hdfs = HadoopConfUtil.getFileSystem(null, null);
 		} catch (IOException e) {
 			e.printStackTrace();
+			System.out.println(e);
 		}
 		
 		lr = new OnlineLogisticRegression(2, numFeatures, new L1());
@@ -131,6 +132,7 @@ public class ReadHive{
 					lr.train(targetValue, input);
 				} catch (Exception e) {
 					e.printStackTrace();
+					System.out.println(e);
 					return false;
 				}
 		        return true;
@@ -192,6 +194,7 @@ public class ReadHive{
 					return true;
 				} catch(Exception e) {
 					e.printStackTrace();
+					System.out.println(e);
 					return false;
 				}
 			}
@@ -231,6 +234,7 @@ public class ReadHive{
 				}
 			} catch (IOException e) {
 				e.printStackTrace();
+				System.out.println(e);
 			}// for file
 			
 			output.printf(Locale.ENGLISH, "pass %d: all(%d) sucess(%d) %n"
