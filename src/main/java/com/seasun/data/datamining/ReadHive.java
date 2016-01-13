@@ -181,7 +181,7 @@ public class ReadHive{
 			public boolean handle(String line) {
 				try{
 					Map<String, String> cols = lineSplit(line);
-					System.out.println("line column size: " + cols.size() + "  values: " + cols);
+					//System.out.println("line column size: " + cols.size() + "  values: " + cols);
 			    	String accountId = cols.get("account_id");
 					
 					String appId = cols.get("app_id");
