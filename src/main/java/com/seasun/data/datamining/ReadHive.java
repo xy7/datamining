@@ -164,6 +164,7 @@ public class ReadHive{
 		String[] intCols = mapInt.split("\2");
 		Map<String, String> res = new HashMap<>();
 		for(String col:intCols){
+			System.out.println("167: " + col);
 			String[] kv = col.split("\3");
 			res.put(kv[0], kv[1]);
 		}
@@ -181,7 +182,7 @@ public class ReadHive{
 			public boolean handle(String line) {
 				try{
 					Map<String, String> cols = lineSplit(line);
-					System.out.println("line column size: " + cols.size() + "  values: " + cols);
+					//System.out.println("line column size: " + cols.size() + "  values: " + cols);
 			    	String accountId = cols.get("account_id");
 					
 					String appId = cols.get("app_id");
