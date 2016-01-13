@@ -8,6 +8,7 @@ import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -113,6 +114,17 @@ public class ReadHive{
 		});
 	}
 	
+	private static List<String> lineSplit(String line){
+		String[] cols = line.split(LogisticRegressionTrain.COLUMN_SPLIT);
+		List<String> res = new ArrayList<>();
+		
+		for(String col:cols){
+			res.addAll(Arrays.asList(col.split(",") ) ); 
+		}
+		
+		return res;
+	}
+	
 	private static void getTargetValue(LocalDate ld) throws Exception{
 		lost.clear();
 		String dayStr = ld.plusDays(14).format(formatter);
@@ -123,15 +135,15 @@ public class ReadHive{
 			@Override
 			public boolean handle(String line) {
 				try{
-					String[] cols = line.split(LogisticRegressionTrain.COLUMN_SPLIT);
-					System.out.println("line column size: " + cols.length);
-			    	String accountId = cols[1];
+					List<String> cols = lineSplit(line);
+					System.out.println("line column size: " + cols.size());
+			    	String accountId = cols.get(1);
 					
-					String appId = cols[0];
+					String appId = cols.get(0);
 					if(!appId.equals(APPID))
 						return true;
 					
-					int last7LoginDaycnt = Integer.parseInt(cols[34] );
+					int last7LoginDaycnt = Integer.parseInt(cols.get(34) );
 					int targetValue = last7LoginDaycnt>0?1:0;
 					lost.put(accountId, targetValue);
 					return true;
@@ -187,7 +199,7 @@ public class ReadHive{
 	public static String parseLine(String line, Vector featureVector) throws Exception {
 		featureVector.setQuick(0, 1.0);//填充常量 k0
 		int[] index = LogisticRegressionTrain.index;
-		List<String> values = Arrays.asList(line.split(LogisticRegressionTrain.COLUMN_SPLIT));
+		List<String> values = lineSplit(line);
 		if(values.size() < index[index.length-1] + 1)
 			throw new Exception("parse error, columns size to small: " + values.size());
 		
