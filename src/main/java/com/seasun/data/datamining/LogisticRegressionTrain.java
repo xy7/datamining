@@ -167,7 +167,7 @@ public class LogisticRegressionTrain{
 
 	public static void printEvalRes(Map<String, double[]> resMap) {
 		double avgRes[] = {0.0, 0.0, 0.0};
-		double maxRes[] = {0.0, 0.0, 0.0};
+		double minRes[] = {0.0, 0.0, 0.0};
 		List<String> dates = new LinkedList<>(resMap.keySet());
 		dates.sort(new Comparator<String>(){
 
@@ -186,8 +186,8 @@ public class LogisticRegressionTrain{
 			
 			for(int i=0;i<3;i++){
 				avgRes[i] += res[i];
-				if(res[i] > maxRes[i])
-					maxRes[i] = res[i];
+				if(res[i] < minRes[i])
+					minRes[i] = res[i];
 			}
 		}//for map
 		
@@ -198,8 +198,8 @@ public class LogisticRegressionTrain{
 		
 		output.printf(Locale.ENGLISH, "avg	cover rate:%2.4f   right rate:%2.4f   hit rate:%2.4f  %n"
 				, avgRes[0], avgRes[1], avgRes[2]);
-		output.printf(Locale.ENGLISH, "max	cover rate:%2.4f   right rate:%2.4f   hit rate:%2.4f  %n"
-				, maxRes[0], maxRes[1], maxRes[2]);
+		output.printf(Locale.ENGLISH, "min	cover rate:%2.4f   right rate:%2.4f   hit rate:%2.4f  %n"
+				, minRes[0], minRes[1], minRes[2]);
 	}
 	
 	private static Map<String, double[]> resMap = new HashMap<>();
