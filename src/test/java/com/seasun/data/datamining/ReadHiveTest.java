@@ -1,8 +1,8 @@
 package com.seasun.data.datamining;
 
-import static org.junit.Assert.*;
-
 import java.time.LocalDate;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.junit.Test;
 
@@ -10,8 +10,9 @@ public class ReadHiveTest {
 
 	@Test
 	public void test() {
-		String s = "\1";
-		System.out.println(s);
+		Map<Integer, Integer> m = new HashMap<>();
+		int a = m.getOrDefault(1, -1111);
+		System.out.println(a);
 	}
 	
 	@Test

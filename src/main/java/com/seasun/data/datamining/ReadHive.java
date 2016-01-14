@@ -175,35 +175,42 @@ public class ReadHive{
 			return;
 		
 		Map<String, Integer> lostLd = lost.get(ld);
+		int[] res = new int[3];//parse error, get target error, sucess
+		rowstat = new int[]{0, 0, 0, 0};
 		analysisHdfsFiles(lfss, new LineHandler(){
 			@Override
 			public boolean handle(String line) {
-				String accountId;
 		        Vector input = new RandomAccessSparseVector(numFeatures);
-		        try {
-		        	accountId = parseLine(line, input, ld);
-		        	if(accountId == null)
-		        		return false;
-		        	int targetValue = lostLd.get(accountId);
-		        	
-		        	if (LogisticRegressionTrain.scores) {
-						// check performance while this is still news
-						double logP = lr.logLikelihood(targetValue, input);
-						double p = lr.classifyScalar(input);
-						out.printf(Locale.ENGLISH, "%2d  %1.4f  |  %2.6f %10.4f%n",
-								targetValue, p, lr.currentLearningRate(), logP);
-					}
-
-					// now update model
-					lr.train(targetValue, input);
-				} catch (Exception e) {
-					//e.printStackTrace();
-					//out.println(e);
-					return false;
+		        String accountId = parseLine(line, input, ld);
+	        	if(accountId == null){
+	        		res[0]++;
+	        		return false;
+	        	}
+	        	
+	        	int targetValue = lostLd.getOrDefault(accountId, -1);
+	        	if(targetValue == -1){
+	        		res[1]++;
+	        		return false;
+	        	}
+	        	
+	        	if (LogisticRegressionTrain.scores) {
+					// check performance while this is still news
+					double logP = lr.logLikelihood(targetValue, input);
+					double p = lr.classifyScalar(input);
+					out.printf(Locale.ENGLISH, "%2d  %1.4f  |  %2.6f %10.4f%n",
+							targetValue, p, lr.currentLearningRate(), logP);
 				}
+
+				// now update model
+				lr.train(targetValue, input);
+				res[2]++;
 		        return true;
 			}
 		});
+		
+		out.printf("columns size to small: %d, app_id: %d, last7LoginDaycnt < 1: %d, uptodate < 14: %d  %n"
+				, rowstat[0], rowstat[1], rowstat[2], rowstat[3]);
+		out.printf("parse error: %d, get target error: %d, sucess: %d %n", res[0], res[1], res[2]);
 	}
 
 	private static RemoteIterator<LocatedFileStatus> listHdfsFiles(LocalDate ld) {
@@ -224,20 +231,26 @@ public class ReadHive{
 
 	private static Map<String, String> lineSplit(String line) throws ArrayIndexOutOfBoundsException{
 
+		
 		String[] cols = line.split("\1");
 		
 		Map<String, String> res = new HashMap<>();
-		res.put("app_id",		cols[0]);
-		res.put("account_id",	cols[1]);
-		res.put("device_id",	cols[2]);
-		res.put("mac",			cols[3]);
-		
-		String mapStr		= cols[4];
-		String mapInt		= cols[5];
-		
-		res.putAll(parse2map(mapStr));
-		
-		res.putAll(parse2map(mapInt));
+		try {
+			res.put("app_id",		cols[0]);
+			res.put("account_id",	cols[1]);
+			res.put("device_id",	cols[2]);
+			res.put("mac",			cols[3]);
+			
+			String mapStr		= cols[4];
+			String mapInt		= cols[5];
+			
+			res.putAll(parse2map(mapStr));
+			
+			res.putAll(parse2map(mapInt));
+		} catch (ArrayIndexOutOfBoundsException e){
+			out.println("lineSplit ArrayIndexOutOfBoundsException: " + line);
+			return null;
+		}
 
 		return res;
 	}
@@ -278,7 +291,7 @@ public class ReadHive{
 					int targetValue = last7LoginDaycnt>0?1:0;
 					lostLd.put(accountId, targetValue);
 					return true;
-				} catch(ArrayIndexOutOfBoundsException e) {
+				} catch(NullPointerException e) {
 					//e.printStackTrace();
 					//out.println(e);
 					return false;
@@ -350,24 +363,28 @@ public class ReadHive{
 		return 0;
 	}
 
-	public static String parseLine(String line, Vector featureVector, LocalDate ld){
+	//返回帐号id
+	private static int[] rowstat;
+	private static String parseLine(String line, Vector featureVector, LocalDate ld){
 		
 		featureVector.setQuick(0, 1.0);//填充常量 k0
 		
 		Map<String, String> cols;
-		try {
-			cols = lineSplit(line);
-			if(cols.size() < 60){
-				//throw new Exception("parse error, columns size to small: " + cols.size());
-				return null;
-			}
-		} catch (ArrayIndexOutOfBoundsException e) {
-			// TODO Auto-generated catch block
-			//e.printStackTrace();
+	
+		cols = lineSplit(line);
+		
+		if(cols == null || cols.size() < 60){
+			//out.println("parse error, columns size to small: " + cols.size());
+			rowstat[0]++;
 			return null;
 		}
 		
-		
+		String appId = cols.get("app_id");
+		if(!appId.equals(APPID)){
+			rowstat[1]++;
+			return null;
+		}
+	
 		int i = 0;
 		for(String k:trainIndex){
 			String s = cols.get(k);
@@ -383,22 +400,23 @@ public class ReadHive{
 		//+ "and last7_login_daycnt >= 1\n"
 		
 		int last7LoginDaycnt = Integer.parseInt( cols.get("last7_login_daycnt") );
-		if(last7LoginDaycnt < 1)
+		if(last7LoginDaycnt < 1){
+			//out.println("last7LoginDaycnt < 1");
+			rowstat[2]++;
 			return null;
+		}
 		int uptodate = dateDiff(ld, firstLoginDate);
-		if(uptodate <= 14)
+		if(uptodate < 14){
+			//out.println("uptodate < 14");
+			rowstat[3]++;
 			return null;
+		}
 				
 		featureVector.setQuick(i, uptodate);
 		
 		String accountId = cols.get("account_id");
-		
-		String appId = cols.get("app_id");
-		if(!appId.equals(APPID))
-			return null;
-		
-		return accountId;//返回帐号id
-	}
 
+		return accountId;
+	}
 
 }
