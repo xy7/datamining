@@ -208,7 +208,7 @@ public class ReadHive{
 			}
 		});
 		
-		out.printf("columns size to small: %d, app_id: %d, last7LoginDaycnt < 1: %d, uptodate < 14: %d  %n"
+		out.printf("columns size to small: %d, app_id: %d, uptodate < 14: %d, last7LoginDaycnt < 1: %d  %n"
 				, rowstat[0], rowstat[1], rowstat[2], rowstat[3]);
 		out.printf("parse error: %d, get target error: %d, sucess: %d %n", res[0], res[1], res[2]);
 	}
@@ -362,9 +362,7 @@ public class ReadHive{
 		
 		featureVector.setQuick(0, 1.0);//填充常量 k0
 		
-		Map<String, String> cols;
-	
-		cols = lineSplit(line);
+		Map<String, String> cols = lineSplit(line);
 		
 		if(cols == null || cols.size() < 60){
 			//out.println("parse error, columns size to small: " + cols.size());
@@ -381,7 +379,7 @@ public class ReadHive{
 		int i = 0;
 		for(String k:trainIndex){
 			String s = cols.get(k);
-			if(s.equals("\\N"))//null值替换为空值
+			if(s.equals("\\N"))//null值替换为0
 				s = "0";
 			featureVector.setQuick(i + 1, Double.parseDouble(s));
 			i++;
@@ -393,6 +391,12 @@ public class ReadHive{
 			return null;
 		}
 		LocalDate firstLoginDate = LocalDate.parse(fistLoginDate);
+		int uptodate = dateDiff(ld, firstLoginDate);
+		if(uptodate < 14){
+			//out.println("uptodate < 14");
+			rowstat[2]++;
+			return null;
+		}
 		
 		//+ "and first_login_date <= '"+ ld.minusDays(13).format(formatter) +"' \n"
 		//+ "and last7_login_daycnt >= 1\n"
@@ -400,16 +404,10 @@ public class ReadHive{
 		int last7LoginDaycnt = Integer.parseInt( cols.get("last7_login_daycnt") );
 		if(last7LoginDaycnt < 1){
 			//out.println("last7LoginDaycnt < 1");
-			rowstat[2]++;
-			return null;
-		}
-		int uptodate = dateDiff(ld, firstLoginDate);
-		if(uptodate < 14){
-			//out.println("uptodate < 14");
 			rowstat[3]++;
 			return null;
 		}
-				
+	
 		featureVector.setQuick(i, uptodate);
 		
 		String accountId = cols.get("account_id");
