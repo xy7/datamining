@@ -176,7 +176,7 @@ public class ReadHive{
 		
 		Map<String, Integer> lostLd = lost.get(ld);
 		int[] res = new int[3];//parse error, get target error, sucess
-		rowstat = new int[]{0, 0, 0, 0};
+		rowstat = new int[]{0, 0, 0, 0, 0};
 		analysisHdfsFiles(lfss, new LineHandler(){
 			@Override
 			public boolean handle(String line) {
@@ -208,8 +208,8 @@ public class ReadHive{
 			}
 		});
 		
-		out.printf("columns size to small: %d, app_id: %d, uptodate < 14: %d, last7LoginDaycnt < 1: %d  %n"
-				, rowstat[0], rowstat[1], rowstat[2], rowstat[3]);
+		out.printf("columns size to small: %d, app_id: %d, first_login_date error: %d, uptodate < 14: %d, last7LoginDaycnt < 1: %d  %n"
+				, rowstat[0], rowstat[1], rowstat[2], rowstat[4], rowstat[3]);
 		out.printf("parse error: %d, get target error: %d, sucess: %d %n", res[0], res[1], res[2]);
 	}
 
@@ -387,6 +387,7 @@ public class ReadHive{
 		
 		String fistLoginDate = cols.get("first_login_date");
 		if(fistLoginDate == null || fistLoginDate.length() != 10){
+			out.println("fistLoginDate format error: " + fistLoginDate);
 			rowstat[2]++;
 			return null;
 		}
@@ -394,7 +395,7 @@ public class ReadHive{
 		int uptodate = dateDiff(ld, firstLoginDate);
 		if(uptodate < 14){
 			//out.println("uptodate < 14");
-			rowstat[2]++;
+			rowstat[4]++;
 			return null;
 		}
 		
