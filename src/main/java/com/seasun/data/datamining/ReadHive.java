@@ -42,7 +42,7 @@ public class ReadHive{
 	
 	private static PrintWriter output = new PrintWriter(new OutputStreamWriter(System.out, Charsets.UTF_8), true);
 	
-	private static Map<String, Integer> lost = new HashMap<>();
+	private static Map<LocalDate, Map<String, Integer>> lost = new HashMap<>();
 	private static OnlineLogisticRegression lr;
 	private static int numFeatures;
 	
@@ -94,19 +94,27 @@ public class ReadHive{
 		LocalDate end   = LocalDate.parse("2015-11-01");
 		for(int i=0;i<LogisticRegressionTrain.TARIN_PASSES;i++){
 			output.printf(Locale.ENGLISH, "--------pass: %2d ---------%n", i);
-			for(LocalDate ld=start; !ld.isAfter(end); ld=ld.plusDays(1) ){
-				getTargetValue(ld);
+			for(LocalDate ld=start; !ld.isAfter(end); ld=ld.plusDays(1) ){	
 				train(ld);
 			}
 		}
-	}
-
-	private static void train(LocalDate ld) throws FileNotFoundException, IOException {
-		String dayStr = ld.format(formatter);
-		RemoteIterator<LocatedFileStatus> lfss = hdfs.listFiles(
-				new Path(table + dayStr + "/user_type=account" )
-				, true);
 		
+		for(LocalDate ld=start; !ld.isAfter(end); ld=ld.plusDays(1) ){	
+			eval(ld);
+		}
+	}
+	
+	private static Map<LocalDate, double[]> resMap = new HashMap<>();
+	
+	private static void eval(LocalDate ld){
+		getTargetValue(ld);
+		
+		RemoteIterator<LocatedFileStatus> lfss = listHdfsFiles(ld);
+		if(lfss == null)
+			return;
+		
+		Integer[] res = {0, 0, 0, 0};//abcd;
+		Map<String, Integer> lostLd = lost.get(ld);
 		analysisHdfsFiles(lfss, new LineHandler(){
 			@Override
 			public boolean handle(String line) {
@@ -116,7 +124,65 @@ public class ReadHive{
 		        	accountId = parseLine(line, input, ld);
 		        	if(accountId == null)
 		        		return false;
-		        	int targetValue = lost.get(accountId);
+		        	int targetValue = lostLd.get(accountId);
+		        	
+		        	double score = lr.classifyScalar(input);
+					int predictValue = score > LogisticRegressionTrain.CLASSIFY_VALUE ? 1 : 0;
+					
+					if (targetValue == 1) {
+						if (predictValue == 1) {
+							res[0]++; //流失用户预测正确
+						} else {
+							res[2]++; //流失用户预测错误
+						}
+					} else {
+						if (predictValue == 1) {
+							res[1]++; //非流失用户预测错误
+						} else {
+							res[3]++; //非流失用户预测正确
+						}
+					}
+				} catch (Exception e) {
+					//e.printStackTrace();
+					//System.out.println(e);
+					return false;
+				}
+		        return true;
+			}
+		});
+		
+		int all = res[0] + res[1] + res[2] + res[3];
+		output.printf("result matrix: lostcnt:%d	remaincnt:%d%n", res[0]+res[2], res[1]+res[3]);
+		output.printf("A:%2.4f	B:%2.4f %n", (double)res[0]/all, (double)res[1]/all);
+		output.printf("C:%2.4f	D:%2.4f %n", (double)res[2]/all, (double)res[3]/all);
+
+		double coverRate = (double) res[0]/(res[0]+res[2]);//覆盖率
+		double rightRate = (double) (res[0]+res[3])/all;//正确率
+		double hitRate = (double) res[0]/(res[0]+res[1]);//命中率
+		output.printf(Locale.ENGLISH, "cover rate:%2.4f   right rate:%2.4f   hit rate:%2.4f  %n"
+				, coverRate, rightRate, hitRate);
+		
+		double[] tmp = {coverRate, rightRate, hitRate};
+		resMap.put(ld, tmp);
+	}
+
+	private static void train(LocalDate ld){
+		getTargetValue(ld);
+		RemoteIterator<LocatedFileStatus> lfss = listHdfsFiles(ld);
+		if(lfss == null)
+			return;
+		
+		Map<String, Integer> lostLd = lost.get(ld);
+		analysisHdfsFiles(lfss, new LineHandler(){
+			@Override
+			public boolean handle(String line) {
+				String accountId;
+		        Vector input = new RandomAccessSparseVector(numFeatures);
+		        try {
+		        	accountId = parseLine(line, input, ld);
+		        	if(accountId == null)
+		        		return false;
+		        	int targetValue = lostLd.get(accountId);
 		        	
 		        	if (LogisticRegressionTrain.scores) {
 						// check performance while this is still news
@@ -136,6 +202,22 @@ public class ReadHive{
 		        return true;
 			}
 		});
+	}
+
+	private static RemoteIterator<LocatedFileStatus> listHdfsFiles(LocalDate ld) {
+		String dayStr = ld.format(formatter);
+		RemoteIterator<LocatedFileStatus> lfss;
+		try {
+			lfss = hdfs.listFiles(
+					new Path(table + dayStr + "/user_type=account" )
+					, true);
+		} catch (IllegalArgumentException | IOException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+			System.out.println("hdfs.listFIles failed! dayStr: " + dayStr);
+			return null;
+		}
+		return lfss;
 	}
 
 	private static Map<String, String> lineSplit(String line) throws ArrayIndexOutOfBoundsException{
@@ -169,12 +251,14 @@ public class ReadHive{
 		return res;
 	}
 	
-	private static void getTargetValue(LocalDate ld) throws Exception{
-		lost.clear();
-		String dayStr = ld.plusDays(14).format(formatter);
-		RemoteIterator<LocatedFileStatus> lfss = hdfs.listFiles(
-				new Path(table + dayStr + "/user_type=account" )
-				, true);
+	private static void getTargetValue(LocalDate ld){
+		if(lost.containsKey(ld))
+			return;
+		RemoteIterator<LocatedFileStatus> lfss = listHdfsFiles(ld.plusDays(14));
+		if(lfss == null)
+			return;
+		
+		Map<String, Integer> lostLd = new HashMap<>();
 		analysisHdfsFiles(lfss, new LineHandler(){
 			@Override
 			public boolean handle(String line) {
@@ -189,7 +273,7 @@ public class ReadHive{
 					
 					int last7LoginDaycnt = Integer.parseInt(cols.get("last7_login_daycnt") );
 					int targetValue = last7LoginDaycnt>0?1:0;
-					lost.put(accountId, targetValue);
+					lostLd.put(accountId, targetValue);
 					return true;
 				} catch(ArrayIndexOutOfBoundsException e) {
 					//e.printStackTrace();
@@ -199,6 +283,8 @@ public class ReadHive{
 			}
 			
 		});
+		
+		lost.put(ld, lostLd);
 	}
 	
 	private static void analysisHdfsFiles(RemoteIterator<LocatedFileStatus> lfss, LineHandler handler){
@@ -241,13 +327,24 @@ public class ReadHive{
 		}// for pass
 	}
 	
-	public static int dayDiff(LocalDate day1, LocalDate day2){
-
-		int i = 0;
-		for(LocalDate ld=day1; !ld.isAfter(day2); ld=ld.plusDays(1)){
-			i++;
+	//day1 - day2 + 1
+	public static int dateDiff(LocalDate day1, LocalDate day2){
+		if(day1.equals(day2)){
+			return 0;
+		} else if(day1.isAfter(day2) ){
+			int i = 0;
+			for(LocalDate ld=day2; !ld.isAfter(day1); ld=ld.plusDays(1)){
+				i++;
+			}
+			return -1*i;
+		} else if(day1.isBefore(day2)) {
+			int i = 0;
+			for(LocalDate ld=day1; !ld.isAfter(day2); ld=ld.plusDays(1)){
+				i++;
+			}
+			return i;
 		}
-		return i;
+		return 0;
 	}
 
 	public static String parseLine(String line, Vector featureVector, LocalDate ld){
@@ -285,7 +382,7 @@ public class ReadHive{
 		int last7LoginDaycnt = Integer.parseInt( cols.get("last7_login_daycnt") );
 		if(last7LoginDaycnt < 1)
 			return null;
-		int uptodate = dayDiff(firstLoginDate, ld);
+		int uptodate = dateDiff(ld, firstLoginDate);
 		if(uptodate <= 14)
 			return null;
 				
