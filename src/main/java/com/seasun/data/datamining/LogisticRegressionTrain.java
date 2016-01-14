@@ -162,6 +162,10 @@ public class LogisticRegressionTrain{
 			}
 		}
 		
+		printEvalRes(resMap);
+	}
+
+	public static void printEvalRes(Map<String, double[]> resMap) {
 		double avgRes[] = {0.0, 0.0, 0.0};
 		double maxRes[] = {0.0, 0.0, 0.0};
 		List<String> dates = new LinkedList<>(resMap.keySet());

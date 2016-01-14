@@ -99,12 +99,14 @@ public class ReadHive{
 			}
 		}
 		
-		for(LocalDate ld=start; !ld.isAfter(end); ld=ld.plusDays(1) ){	
+		for(LocalDate ld=start; !ld.isAfter(end.plusDays(60)); ld=ld.plusDays(1) ){	
 			eval(ld);
 		}
+		
+		LogisticRegressionTrain.printEvalRes(resMap);
 	}
 	
-	private static Map<LocalDate, double[]> resMap = new HashMap<>();
+	private static Map<String, double[]> resMap = new HashMap<>();
 	
 	private static void eval(LocalDate ld){
 		out.println("eval: " + ld.toString());
@@ -164,7 +166,7 @@ public class ReadHive{
 				, coverRate, rightRate, hitRate);
 		
 		double[] tmp = {coverRate, rightRate, hitRate};
-		resMap.put(ld, tmp);
+		resMap.put(ld.toString(), tmp);
 	}
 
 	private static void train(LocalDate ld){
