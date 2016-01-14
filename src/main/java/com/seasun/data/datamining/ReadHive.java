@@ -229,39 +229,36 @@ public class ReadHive{
 		return lfss;
 	}
 
-	private static Map<String, String> lineSplit(String line) throws ArrayIndexOutOfBoundsException{
+	private static Map<String, String> lineSplit(String line){
 
-		
 		String[] cols = line.split("\1");
-		
 		Map<String, String> res = new HashMap<>();
-		try {
-			res.put("app_id",		cols[0]);
-			res.put("account_id",	cols[1]);
-			res.put("device_id",	cols[2]);
-			res.put("mac",			cols[3]);
-			
-			String mapStr		= cols[4];
-			String mapInt		= cols[5];
-			
-			res.putAll(parse2map(mapStr));
-			
-			res.putAll(parse2map(mapInt));
-		} catch (ArrayIndexOutOfBoundsException e){
-			out.println("lineSplit ArrayIndexOutOfBoundsException: " + line);
-			return null;
-		}
+		
+		res.put("app_id",		cols[0]);
+		res.put("account_id",	cols[1]);
+		res.put("device_id",	cols[2]);
+		res.put("mac",			cols[3]);
+		
+		String mapStr		= cols[4];
+		String mapInt		= cols[5];
+		
+		res.putAll(parse2map(mapStr));
+		res.putAll(parse2map(mapInt));
 
 		return res;
 	}
 
-	private static Map<String, String> parse2map(String mapInt) throws ArrayIndexOutOfBoundsException {
+	private static Map<String, String> parse2map(String mapInt) {
 		String[] intCols = mapInt.split("\2");
 		Map<String, String> res = new HashMap<>();
 		for(String col:intCols){
 			//out.println("167: " + col);
 			String[] kv = col.split("\3");
-			res.put(kv[0], kv[1]);
+			String value = "";
+			if(kv.length >= 2)
+				value = kv[1];
+			
+			res.put(kv[0], value);
 		}
 		return res;
 	}
