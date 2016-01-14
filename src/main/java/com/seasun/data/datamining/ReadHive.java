@@ -40,7 +40,7 @@ public class ReadHive{
 	private static DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 	private static String table = "/hive/warehouse/fig.db/fig_app_user/dt=";
 	
-	private static PrintWriter output = new PrintWriter(new OutputStreamWriter(System.out, Charsets.UTF_8), true);
+	private static PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out, Charsets.UTF_8), true);
 	
 	private static Map<LocalDate, Map<String, Integer>> lost = new HashMap<>();
 	private static OnlineLogisticRegression lr;
@@ -72,7 +72,7 @@ public class ReadHive{
 			hdfs = HadoopConfUtil.getFileSystem(null, null);
 		} catch (IOException e) {
 			e.printStackTrace();
-			System.out.println(e);
+			out.println(e);
 		}
 		
 		lr = new OnlineLogisticRegression(2, numFeatures, new L1());
@@ -85,7 +85,7 @@ public class ReadHive{
 		
 		if(!LogisticRegressionTrain.loadConfigFile("./config.properties")){
 			if(!LogisticRegressionTrain.loadConfigFile("./config/config.properties")){
-				System.out.println("load config file error");
+				out.println("load config file error");
 				return;
 			}
 		}
@@ -93,7 +93,7 @@ public class ReadHive{
 		LocalDate start = LocalDate.parse("2015-11-01");
 		LocalDate end   = LocalDate.parse("2015-11-01");
 		for(int i=0;i<LogisticRegressionTrain.TARIN_PASSES;i++){
-			output.printf(Locale.ENGLISH, "--------pass: %2d ---------%n", i);
+			out.printf(Locale.ENGLISH, "--------pass: %2d ---------%n", i);
 			for(LocalDate ld=start; !ld.isAfter(end); ld=ld.plusDays(1) ){	
 				train(ld);
 			}
@@ -107,6 +107,7 @@ public class ReadHive{
 	private static Map<LocalDate, double[]> resMap = new HashMap<>();
 	
 	private static void eval(LocalDate ld){
+		out.println("eval: " + ld.toString());
 		getTargetValue(ld);
 		
 		RemoteIterator<LocatedFileStatus> lfss = listHdfsFiles(ld);
@@ -144,7 +145,7 @@ public class ReadHive{
 					}
 				} catch (Exception e) {
 					//e.printStackTrace();
-					//System.out.println(e);
+					//out.println(e);
 					return false;
 				}
 		        return true;
@@ -152,14 +153,14 @@ public class ReadHive{
 		});
 		
 		int all = res[0] + res[1] + res[2] + res[3];
-		output.printf("result matrix: lostcnt:%d	remaincnt:%d%n", res[0]+res[2], res[1]+res[3]);
-		output.printf("A:%2.4f	B:%2.4f %n", (double)res[0]/all, (double)res[1]/all);
-		output.printf("C:%2.4f	D:%2.4f %n", (double)res[2]/all, (double)res[3]/all);
+		out.printf("result matrix: lostcnt:%d	remaincnt:%d%n", res[0]+res[2], res[1]+res[3]);
+		out.printf("A:%2.4f	B:%2.4f %n", (double)res[0]/all, (double)res[1]/all);
+		out.printf("C:%2.4f	D:%2.4f %n", (double)res[2]/all, (double)res[3]/all);
 
 		double coverRate = (double) res[0]/(res[0]+res[2]);//覆盖率
 		double rightRate = (double) (res[0]+res[3])/all;//正确率
 		double hitRate = (double) res[0]/(res[0]+res[1]);//命中率
-		output.printf(Locale.ENGLISH, "cover rate:%2.4f   right rate:%2.4f   hit rate:%2.4f  %n"
+		out.printf(Locale.ENGLISH, "cover rate:%2.4f   right rate:%2.4f   hit rate:%2.4f  %n"
 				, coverRate, rightRate, hitRate);
 		
 		double[] tmp = {coverRate, rightRate, hitRate};
@@ -167,6 +168,7 @@ public class ReadHive{
 	}
 
 	private static void train(LocalDate ld){
+		out.println("train: " + ld.toString());
 		getTargetValue(ld);
 		RemoteIterator<LocatedFileStatus> lfss = listHdfsFiles(ld);
 		if(lfss == null)
@@ -188,7 +190,7 @@ public class ReadHive{
 						// check performance while this is still news
 						double logP = lr.logLikelihood(targetValue, input);
 						double p = lr.classifyScalar(input);
-						output.printf(Locale.ENGLISH, "%2d  %1.4f  |  %2.6f %10.4f%n",
+						out.printf(Locale.ENGLISH, "%2d  %1.4f  |  %2.6f %10.4f%n",
 								targetValue, p, lr.currentLearningRate(), logP);
 					}
 
@@ -196,7 +198,7 @@ public class ReadHive{
 					lr.train(targetValue, input);
 				} catch (Exception e) {
 					//e.printStackTrace();
-					//System.out.println(e);
+					//out.println(e);
 					return false;
 				}
 		        return true;
@@ -214,7 +216,7 @@ public class ReadHive{
 		} catch (IllegalArgumentException | IOException e1) {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
-			System.out.println("hdfs.listFIles failed! dayStr: " + dayStr);
+			out.println("hdfs.listFIles failed! dayStr: " + dayStr);
 			return null;
 		}
 		return lfss;
@@ -244,7 +246,7 @@ public class ReadHive{
 		String[] intCols = mapInt.split("\2");
 		Map<String, String> res = new HashMap<>();
 		for(String col:intCols){
-			//System.out.println("167: " + col);
+			//out.println("167: " + col);
 			String[] kv = col.split("\3");
 			res.put(kv[0], kv[1]);
 		}
@@ -252,6 +254,7 @@ public class ReadHive{
 	}
 	
 	private static void getTargetValue(LocalDate ld){
+		out.println("getTargetValue: " + ld.toString());
 		if(lost.containsKey(ld))
 			return;
 		RemoteIterator<LocatedFileStatus> lfss = listHdfsFiles(ld.plusDays(14));
@@ -264,7 +267,7 @@ public class ReadHive{
 			public boolean handle(String line) {
 				try{
 					Map<String, String> cols = lineSplit(line);
-					//System.out.println("line column size: " + cols.size() + "  values: " + cols);
+					//out.println("line column size: " + cols.size() + "  values: " + cols);
 			    	String accountId = cols.get("account_id");
 					
 					String appId = cols.get("app_id");
@@ -277,7 +280,7 @@ public class ReadHive{
 					return true;
 				} catch(ArrayIndexOutOfBoundsException e) {
 					//e.printStackTrace();
-					//System.out.println(e);
+					//out.println(e);
 					return false;
 				}
 			}
@@ -319,10 +322,10 @@ public class ReadHive{
 				}
 			} catch (IOException e) {
 				e.printStackTrace();
-				System.out.println(e);
+				out.println(e);
 			}// for file
 			
-			output.printf(Locale.ENGLISH, "pass %d: all(%d) sucess(%d) %n"
+			out.printf(Locale.ENGLISH, "pass %d: all(%d) sucess(%d) %n"
 					, pass, all, suc);
 		}// for pass
 	}
