@@ -387,7 +387,7 @@ public class ReadHive{
 		
 		String fistLoginDate = cols.get("first_login_date");
 		if(fistLoginDate == null || fistLoginDate.length() != 10){
-			out.println("fistLoginDate format error: " + fistLoginDate);
+			//out.println("fistLoginDate format error: " + fistLoginDate);
 			rowstat[2]++;
 			return null;
 		}
