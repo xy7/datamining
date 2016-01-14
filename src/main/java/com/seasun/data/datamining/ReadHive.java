@@ -169,7 +169,7 @@ public class ReadHive{
 
 	private static void train(LocalDate ld){
 		out.println("train: " + ld.toString());
-		getTargetValue(ld);
+		//getTargetValue(ld);
 		RemoteIterator<LocatedFileStatus> lfss = listHdfsFiles(ld);
 		if(lfss == null)
 			return;
@@ -394,7 +394,7 @@ public class ReadHive{
 		LocalDate firstLoginDate = LocalDate.parse(fistLoginDate);
 		int uptodate = dateDiff(ld, firstLoginDate);
 		if(uptodate < 14){
-			//out.println("uptodate < 14");
+			out.println("uptodate < 14: " + firstLoginDate);
 			rowstat[4]++;
 			return null;
 		}
