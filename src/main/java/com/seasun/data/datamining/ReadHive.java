@@ -300,44 +300,40 @@ public class ReadHive{
 		lost.put(ld, lostLd);
 	}
 	
-	private static void analysisHdfsFiles(RemoteIterator<LocatedFileStatus> lfss, LineHandler handler){
-		analysisHdfsFiles(lfss, handler, 1);
-	}
 	
-	private static void analysisHdfsFiles(RemoteIterator<LocatedFileStatus> lfss, LineHandler handler, int passes){
-		for (int pass = 0; pass < passes; pass++) {
-			int all = 0;
-			int suc = 0;
-			try {
-				while(lfss.hasNext()){
-					LocatedFileStatus lfs = lfss.next();
-					CompressionCodec codec = factory.getCodec(lfs.getPath() ); 
-					FSDataInputStream in = hdfs.open(lfs.getPath() );
-					BufferedReader br;
-					if(codec == null){
-						br = new BufferedReader(new InputStreamReader(in));
-					} else {
-						CompressionInputStream comInputStream = codec.createInputStream(in);  
-				        br = new BufferedReader(new InputStreamReader(comInputStream));
-					}
-					
-					String line;
-				    while ((line = br.readLine()) != null) {
-				    	all++;
-				    	if(handler.handle(line))
-				    		suc++;
-				    }
-				    br.close();
-				    in.close();
+	private static void analysisHdfsFiles(RemoteIterator<LocatedFileStatus> lfss, LineHandler handler){
+
+		int all = 0;
+		int suc = 0;
+		try {
+			while(lfss.hasNext()){
+				LocatedFileStatus lfs = lfss.next();
+				CompressionCodec codec = factory.getCodec(lfs.getPath() ); 
+				FSDataInputStream in = hdfs.open(lfs.getPath() );
+				BufferedReader br;
+				if(codec == null){
+					br = new BufferedReader(new InputStreamReader(in));
+				} else {
+					CompressionInputStream comInputStream = codec.createInputStream(in);  
+			        br = new BufferedReader(new InputStreamReader(comInputStream));
 				}
-			} catch (IOException e) {
-				e.printStackTrace();
-				out.println(e);
-			}// for file
-			
-			out.printf(Locale.ENGLISH, "pass %d: all(%d) sucess(%d) %n"
-					, pass, all, suc);
-		}// for pass
+				
+				String line;
+			    while ((line = br.readLine()) != null) {
+			    	all++;
+			    	if(handler.handle(line))
+			    		suc++;
+			    }
+			    br.close();
+			    in.close();
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+			out.println(e);
+		}// for file
+		
+		out.printf(Locale.ENGLISH, "analysisHdfsFiles finish: all(%d) sucess(%d) %n"
+				, all, suc);
 	}
 	
 	//day1 - day2 + 1
@@ -391,7 +387,12 @@ public class ReadHive{
 			i++;
 		}
 		
-		LocalDate firstLoginDate = LocalDate.parse(cols.get("first_login_date") );
+		String fistLoginDate = cols.get("first_login_date");
+		if(fistLoginDate == null || fistLoginDate.length() != 10){
+			rowstat[2]++;
+			return null;
+		}
+		LocalDate firstLoginDate = LocalDate.parse(fistLoginDate);
 		
 		//+ "and first_login_date <= '"+ ld.minusDays(13).format(formatter) +"' \n"
 		//+ "and last7_login_daycnt >= 1\n"
