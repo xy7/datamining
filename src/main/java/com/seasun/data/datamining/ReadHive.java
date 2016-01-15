@@ -1,14 +1,12 @@
 package com.seasun.data.datamining;
 
 import java.io.BufferedReader;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -33,7 +31,7 @@ import org.apache.mahout.math.Vector;
 import com.github.dataswitch.util.HadoopConfUtil;
 
 public class ReadHive{
-	private static final String APPID = "1024appid";
+	private static String APPID = "1024appid";
 	private static Configuration conf = HadoopConfUtil.newConf(); 
 	private static CompressionCodecFactory factory = new CompressionCodecFactory(conf); 
 	private static FileSystem hdfs;
@@ -83,27 +81,29 @@ public class ReadHive{
 
 	public static void main(String[] args) throws Exception {
 		
-		if(!LogisticRegressionTrain.loadConfigFile("./config.properties")){
-			if(!LogisticRegressionTrain.loadConfigFile("./config/config.properties")){
-				out.println("load config file error");
-				return;
-			}
-		}
-	
-		LocalDate start = LocalDate.parse("2015-11-01");
-		LocalDate end   = LocalDate.parse("2015-11-01");
-		for(int i=0;i<LogisticRegressionTrain.TARIN_PASSES;i++){
+		Utils.loadConfigFile("./config.properties.hive");
+		APPID = Utils.getOrDefault("appid", "1024appid");
+
+		LocalDate start = LocalDate.parse(Utils.getOrDefault("train_start", "2015-11-01") );
+		LocalDate end   = LocalDate.parse(Utils.getOrDefault("train_end", "2015-11-01") );
+		int trainPass = Utils.getOrDefault("train_pass", 1);
+		for(int i=0;i<trainPass;i++){
 			out.printf(Locale.ENGLISH, "--------pass: %2d ---------%n", i);
 			for(LocalDate ld=start; !ld.isAfter(end); ld=ld.plusDays(1) ){	
 				train(ld);
 			}
 		}
 		
-		for(LocalDate ld=start; !ld.isAfter(end.plusDays(60)); ld=ld.plusDays(1) ){	
+		Utils.saveModel(lr);
+		
+		LocalDate evalStart = LocalDate.parse(Utils.getOrDefault("eval_start", "2015-11-01") );
+		LocalDate evalEnd   = LocalDate.parse(Utils.getOrDefault("eval_end", "2015-11-01") );
+		
+		for(LocalDate ld=evalStart; !ld.isAfter(evalEnd); ld=ld.plusDays(1) ){	
 			eval(ld);
 		}
 		
-		LogisticRegressionTrain.printEvalRes(resMap);
+		Utils.printEvalRes(resMap);
 	}
 	
 	private static Map<String, double[]> resMap = new HashMap<>();
@@ -130,7 +130,7 @@ public class ReadHive{
 		        	int targetValue = lostLd.get(accountId);
 		        	
 		        	double score = lr.classifyScalar(input);
-					int predictValue = score > LogisticRegressionTrain.CLASSIFY_VALUE ? 1 : 0;
+					int predictValue = score > Utils.CLASSIFY_VALUE ? 1 : 0;
 					
 					if (targetValue == 1) {
 						if (predictValue == 1) {
@@ -195,7 +195,7 @@ public class ReadHive{
 	        		return false;
 	        	}
 	        	
-	        	if (LogisticRegressionTrain.scores) {
+	        	if (Utils.scores) {
 					// check performance while this is still news
 					double logP = lr.logLikelihood(targetValue, input);
 					double p = lr.classifyScalar(input);
@@ -210,8 +210,8 @@ public class ReadHive{
 			}
 		});
 		
-		out.printf("columns size to small: %d, app_id: %d, first_login_date error: %d, uptodate < 14: %d, last7LoginDaycnt < 1: %d  %n"
-				, rowstat[0], rowstat[1], rowstat[2], rowstat[4], rowstat[3]);
+		out.printf("columns size too small or appid not %s: %d, first_login_date error: %d, uptodate < 14: %d, last7LoginDaycnt < 1: %d  %n"
+				, APPID, rowstat[0], rowstat[1], rowstat[2], rowstat[3]);
 		out.printf("parse error: %d, get target error: %d, sucess: %d %n", res[0], res[1], res[2]);
 	}
 
@@ -234,6 +234,9 @@ public class ReadHive{
 	private static Map<String, String> lineSplit(String line){
 
 		String[] cols = line.split("\1");
+		String appId = cols[0];
+		if(appId != APPID)
+			return null;
 		Map<String, String> res = new HashMap<>();
 		
 		res.put("app_id",		cols[0]);
@@ -279,13 +282,11 @@ public class ReadHive{
 			public boolean handle(String line) {
 				try{
 					Map<String, String> cols = lineSplit(line);
+					if(cols == null)
+						return true;
 					//out.println("line column size: " + cols.size() + "  values: " + cols);
 			    	String accountId = cols.get("account_id");
-					
-					String appId = cols.get("app_id");
-					if(!appId.equals(APPID))
-						return true;
-					
+
 					int last7LoginDaycnt = Integer.parseInt(cols.get("last7_login_daycnt") );
 					int targetValue = last7LoginDaycnt>0?1:0;
 					lostLd.put(accountId, targetValue);
@@ -338,26 +339,6 @@ public class ReadHive{
 				, all, suc);
 	}
 	
-	//day1 - day2 + 1
-	public static int dateDiff(LocalDate day1, LocalDate day2){
-		if(day1.equals(day2)){
-			return 0;
-		} else if(day1.isAfter(day2) ){
-			int i = 0;
-			for(LocalDate ld=day2; !ld.isAfter(day1); ld=ld.plusDays(1)){
-				i++;
-			}
-			return i;
-		} else if(day1.isBefore(day2)) {
-			int i = 0;
-			for(LocalDate ld=day1; !ld.isAfter(day2); ld=ld.plusDays(1)){
-				i++;
-			}
-			return -1*i;
-		}
-		return 0;
-	}
-
 	//返回帐号id
 	private static int[] rowstat;
 	private static String parseLine(String line, Vector featureVector, LocalDate ld){
@@ -371,13 +352,7 @@ public class ReadHive{
 			rowstat[0]++;
 			return null;
 		}
-		
-		String appId = cols.get("app_id");
-		if(!appId.equals(APPID)){
-			rowstat[1]++;
-			return null;
-		}
-	
+
 		int i = 0;
 		for(String k:trainIndex){
 			String s = cols.get(k);
@@ -390,14 +365,14 @@ public class ReadHive{
 		String fistLoginDate = cols.get("first_login_date");
 		if(fistLoginDate == null || fistLoginDate.length() != 10){
 			//out.println("fistLoginDate format error: " + fistLoginDate);
-			rowstat[2]++;
+			rowstat[1]++;
 			return null;
 		}
 		LocalDate firstLoginDate = LocalDate.parse(fistLoginDate);
-		int uptodate = dateDiff(ld, firstLoginDate);
+		int uptodate = Utils.dateDiff(ld, firstLoginDate);
 		if(uptodate < 14){
 			//out.println("uptodate < 14: " + firstLoginDate);
-			rowstat[4]++;
+			rowstat[2]++;
 			return null;
 		}
 		

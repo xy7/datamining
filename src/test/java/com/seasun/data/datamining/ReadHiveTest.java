@@ -19,8 +19,6 @@ public class ReadHiveTest {
 	public void dayDiffTest(){
 		LocalDate start = LocalDate.parse("2015-11-01");
 		LocalDate end   = LocalDate.parse("2015-07-29");
-		System.out.println(ReadHive.dateDiff(start, end) );
-		System.out.println(ReadHive.dateDiff(end, start) );
 
 	}
 

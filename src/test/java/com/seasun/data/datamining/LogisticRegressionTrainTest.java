@@ -9,10 +9,6 @@ import org.junit.Test;
 
 public class LogisticRegressionTrainTest {
 
-	@Test
-	public void loadConfigFileTest() {
-		LogisticRegressionTrain.loadConfigFile("./config.properties");
-	}
 	
 	@Test
 	public void genSql(){

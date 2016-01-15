@@ -34,21 +34,20 @@ import org.apache.mahout.math.Vector;
  */
 public class LogisticRegressionTrain{
 	
-	public static double CLASSIFY_VALUE = 0.5;
-	public static boolean loadFile = false;
-	public static String SAMPLE_DIR = "./fig_app_user/sample/";
-	public static int TARIN_PASSES = 5;
-	public static String PREDICT_DIR = "./fig_app_user/predict/";
-	public static String MODEL_PARAM_FILE = "lrParam.txt";
-	public static String COLUMN_SPLIT = "\1";
-	public static boolean scores = true;
-	public static PrintWriter output = new PrintWriter(new OutputStreamWriter(System.out, Charsets.UTF_8), true);
+	private static double CLASSIFY_VALUE = 0.5;
+	private static String SAMPLE_DIR = "./fig_app_user/sample/";
+	private static int TARIN_PASSES = 5;
+	private static String PREDICT_DIR = "./fig_app_user/predict/";
+	private static String MODEL_PARAM_FILE = "lrParam.txt";
+	private static String COLUMN_SPLIT = "\1";
+	private static boolean scores = true;
+	private static PrintWriter output = new PrintWriter(new OutputStreamWriter(System.out, Charsets.UTF_8), true);
 
 	//role_level first_login_cnt first_online_dur total_recharge total_recharge_cnt last7_login_cnt last7_login_daycnt last7_online_dur
-	public static int[] index;
-	public static int numFeatures;
+	private static int[] index;
+	private static int numFeatures;
 	
-	public static int parseLine(String line, Vector featureVector) throws Exception {
+	private static int parseLine(String line, Vector featureVector) throws Exception {
 		featureVector.setQuick(0, 1.0);//填充常量 k0
 		List<String> values = Arrays.asList(line.split(COLUMN_SPLIT));
 		if(values.size() < index[index.length-1] + 1)
@@ -69,30 +68,10 @@ public class LogisticRegressionTrain{
 		return res;
 	}
 	
-	public static boolean loadConfigFile(String file){
-		if(loadFile)
-			return true;
-		Properties props = new Properties();
-	    //InputStream in = LogisticRegressionTrain.class.getResourceAsStream(file); //配置文件的相对路径以类文件所在目录作为当前目录
-		InputStream in = null;
-		try {
-			in = new FileInputStream(file); //配置文件的相对路径以工作目录
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-			System.out.println("read config file error");
-			return false;
-		}
-	    
-	    try {
-			props.load(in);
-			in.close();
-		} catch (IOException e1) {
-			e1.printStackTrace();
-			System.out.println("load config file error");
-			return false;
-		}
+	private static boolean loadConfigFile(String file){
+		Utils.loadConfigFile(file);
   
-	    String indexStr = props.getProperty("index");
+	    String indexStr = Utils.getOrDefault("index", "10,25,26,28,29,30,31,32,33,34,35,65");
 	    if(indexStr != null){
 	    	String[] indexArray = indexStr.split(",");
 	    	index = new int[indexArray.length];
@@ -106,52 +85,25 @@ public class LogisticRegressionTrain{
 		    System.out.println("");
 	    }
 	    
-	    COLUMN_SPLIT = replaceStringProp(props, "column_split", COLUMN_SPLIT);
-	    MODEL_PARAM_FILE = replaceStringProp(props, "model_param_file", MODEL_PARAM_FILE);
-	    SAMPLE_DIR = replaceStringProp(props, "sample_dir", SAMPLE_DIR);
-	    TARIN_PASSES = Integer.parseInt( replaceStringProp(props, "train_passes", Integer.toString(TARIN_PASSES) ) );
-	    PREDICT_DIR = replaceStringProp(props, "predict_dir", PREDICT_DIR);
-	    scores = Boolean.parseBoolean(replaceStringProp(props, "scores", Boolean.toString(scores)) );
-	    CLASSIFY_VALUE = Double.parseDouble(replaceStringProp(props, "classify_value", Double.toString(CLASSIFY_VALUE)) );
-  
-	    loadFile = true;
+	    COLUMN_SPLIT = Utils.getOrDefault("column_split", COLUMN_SPLIT);
+	    MODEL_PARAM_FILE = Utils.getOrDefault("model_param_file", MODEL_PARAM_FILE);
+	    SAMPLE_DIR = Utils.getOrDefault("sample_dir", SAMPLE_DIR);
+	    TARIN_PASSES = Utils.getOrDefault("train_passes", TARIN_PASSES);
+	    PREDICT_DIR = Utils.getOrDefault("predict_dir", PREDICT_DIR);
+	    scores = Utils.getOrDefault("scores", scores);
+	    CLASSIFY_VALUE = Utils.getOrDefault("classify_value", CLASSIFY_VALUE);
 	    return true;
 	}
-	
-	private static String replaceStringProp(Properties props, String key, String target){
-		 String value = props.getProperty(key);
-		    if(value != null)
-		    	target = value;
-		    System.out.println(key + ": " + target);
-		   return target;
-	}
-	
-	private static OnlineLogisticRegression loadModelParam() {
-		OnlineLogisticRegression lr = new OnlineLogisticRegression();
-		
-		InputStream input = null;
-		try {
-			input = new FileInputStream(MODEL_PARAM_FILE);
-			DataInput in = new DataInputStream(input);
-			lr.readFields(in);
-			input.close();
-		} catch (Exception e) {
-			e.printStackTrace();
-			System.out.println("load model param file failed!");
-		}
-		return lr;
-	}
-	
-	
-	public static void evalModel() {
-		OnlineLogisticRegression lr = loadModelParam(); 
+
+	private static void evalModel() {
+		OnlineLogisticRegression lr = Utils.loadModelParam(); 
 		
 		evalModel(lr, PREDICT_DIR);
 	}
 	
-	public static void evalModelMutiDir(String dirStr){
+	private static void evalModelMutiDir(String dirStr){
 	
-		OnlineLogisticRegression lr = loadModelParam();
+		OnlineLogisticRegression lr = Utils.loadModelParam();
 		
 		File dir = new File(dirStr);
 		File[] files = dir.listFiles();
@@ -162,44 +114,7 @@ public class LogisticRegressionTrain{
 			}
 		}
 		
-		printEvalRes(resMap);
-	}
-
-	public static void printEvalRes(Map<String, double[]> resMap) {
-		double avgRes[] = {0.0, 0.0, 0.0};
-		double minRes[] = {0.0, 0.0, 0.0};
-		List<String> dates = new LinkedList<>(resMap.keySet());
-		dates.sort(new Comparator<String>(){
-
-			@Override
-			public int compare(String o1, String o2) {
-				// TODO Auto-generated method stub
-				return o1.compareTo(o2);
-			}
-			
-		});
-		
-		for(String name:dates){
-			double[] res = resMap.get(name);
-			output.printf(Locale.ENGLISH, "dir name:%s	cover rate:%2.4f   right rate:%2.4f   hit rate:%2.4f  %n"
-					, name , res[0], res[1], res[2]);
-			
-			for(int i=0;i<3;i++){
-				avgRes[i] += res[i];
-				if(res[i] < minRes[i])
-					minRes[i] = res[i];
-			}
-		}//for map
-		
-		int n = resMap.size();
-		for(int i=0;i<3;i++){
-			avgRes[i] /= n;
-		}
-		
-		output.printf(Locale.ENGLISH, "avg	cover rate:%2.4f   right rate:%2.4f   hit rate:%2.4f  %n"
-				, avgRes[0], avgRes[1], avgRes[2]);
-		output.printf(Locale.ENGLISH, "min	cover rate:%2.4f   right rate:%2.4f   hit rate:%2.4f  %n"
-				, minRes[0], minRes[1], minRes[2]);
+		Utils.printEvalRes(resMap);
 	}
 	
 	private static Map<String, double[]> resMap = new HashMap<>();
@@ -274,7 +189,7 @@ public class LogisticRegressionTrain{
 		evalModelMutiDir(SAMPLE_DIR);
 	}
 	
-	public static void trainModel(){
+	private static void trainModel(){
 		File dir = new File(SAMPLE_DIR);
 		File[] files = dir.listFiles();
 		
@@ -316,13 +231,9 @@ public class LogisticRegressionTrain{
 				return true;
 			}
 		}, TARIN_PASSES);
-		
-		output.printf(Locale.ENGLISH, "%s %n", lr.getBeta().toString());
-		try (DataOutputStream modelOutput = new DataOutputStream(new FileOutputStream(MODEL_PARAM_FILE))) {
-			lr.write(modelOutput);
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+
+		Utils.saveModel(lr);
+
 		return lr;
 	}
 
