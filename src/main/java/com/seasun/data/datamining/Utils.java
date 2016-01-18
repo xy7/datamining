@@ -55,11 +55,12 @@ public class Utils {
 			return false;
 		}
 	    
+	    loadFile = true;
+	    
 	    CLASSIFY_VALUE = getOrDefault("classify_value", CLASSIFY_VALUE);
 	    scores = getOrDefault("scores", scores);
 	    MODEL_PARAM_FILE = getOrDefault("model_param_file", MODEL_PARAM_FILE);
-  
-	    loadFile = true;
+
 	    return true;
 	}
 
