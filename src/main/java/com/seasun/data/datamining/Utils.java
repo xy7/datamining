@@ -74,7 +74,7 @@ public class Utils {
 		
 		String value = props.getProperty(key);
 		if(value == null){
-			out.printf("get %s default: %s %n", key, (String)def);
+			out.printf("get %s default: %s %n", key, def);
 			return def;
 		}
 		
@@ -190,5 +190,10 @@ public class Utils {
 			return -1*i;
 		}
 		return 0;
+	}
+	
+	public static void main(String[] args) {
+		int i = 10;
+		out.printf("get default: %s %n",  1);
 	}
 }
