@@ -73,8 +73,12 @@ public class Utils {
 			loadConfigFile("./config.properties");
 		
 		String value = props.getProperty(key);
-		if(value == null)
+		if(value == null){
+			out.printf("get %s default: %s %n", key, (String)def);
 			return def;
+		}
+		
+		out.printf("get %s : %s %n", key, value);
 		
 		String typeName = def.getClass().getName();
 		if(typeName.equals("java.lang.Double")){
