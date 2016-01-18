@@ -353,12 +353,12 @@ public class ReadHive{
 			return null;
 		}
 
-		int i = 0;
+		int i = 1;
 		for(String k:trainIndex){
 			String s = cols.get(k);
 			if(s.equals("\\N"))//null值替换为0
 				s = "0";
-			featureVector.setQuick(i + 1, Double.parseDouble(s));
+			featureVector.setQuick(i, Double.parseDouble(s));
 			i++;
 		}
 		
