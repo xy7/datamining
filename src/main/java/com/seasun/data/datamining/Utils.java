@@ -137,7 +137,7 @@ public class Utils {
 	//将多天的统计结果打印出来
 	public static void printEvalRes(Map<String, double[]> resMap) {
 		double avgRes[] = {0.0, 0.0, 0.0};
-		double minRes[] = {0.0, 0.0, 0.0};
+		double minRes[] = {1.0, 1.0, 1.0};
 		List<String> dates = new LinkedList<>(resMap.keySet());
 		dates.sort(new Comparator<String>(){
 
