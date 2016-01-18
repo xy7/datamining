@@ -35,8 +35,8 @@ public class ReadHive{
 	private static Configuration conf = HadoopConfUtil.newConf(); 
 	private static CompressionCodecFactory factory = new CompressionCodecFactory(conf); 
 	private static FileSystem hdfs;
-	private static DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-	private static String table = "/hive/warehouse/fig.db/fig_app_user/dt=";
+	private final static DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+	private final static String table = "/hive/warehouse/fig.db/fig_app_user/dt=";
 	
 	private static PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out, Charsets.UTF_8), true);
 	
@@ -82,7 +82,7 @@ public class ReadHive{
 	public static void main(String[] args) throws Exception {
 		
 		Utils.loadConfigFile("./config.properties.hive");
-		APPID = Utils.getOrDefault("appid", "1024appid");
+		APPID = Utils.getOrDefault("appid", APPID);
 
 		LocalDate start = LocalDate.parse(Utils.getOrDefault("train_start", "2015-11-01") );
 		LocalDate end   = LocalDate.parse(Utils.getOrDefault("train_end", "2015-11-01") );
