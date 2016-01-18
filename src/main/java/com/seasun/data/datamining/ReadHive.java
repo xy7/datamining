@@ -235,7 +235,7 @@ public class ReadHive{
 
 		String[] cols = line.split("\1");
 		String appId = cols[0];
-		if(appId != APPID)
+		if(!appId.equals(APPID) )
 			return null;
 		Map<String, String> res = new HashMap<>();
 		
