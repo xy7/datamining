@@ -23,6 +23,7 @@ import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.CompressionCodecFactory;
 import org.apache.hadoop.io.compress.CompressionInputStream;
+import org.apache.mahout.classifier.evaluation.Auc;
 import org.apache.mahout.classifier.sgd.L1;
 import org.apache.mahout.classifier.sgd.OnlineLogisticRegression;
 import org.apache.mahout.math.RandomAccessSparseVector;
@@ -116,6 +117,7 @@ public class ReadHive{
 		if(lfss == null)
 			return;
 		
+		Auc collector = new Auc();
 		Integer[] res = {0, 0, 0, 0};//abcd;
 		Map<String, Integer> lostLd = lost.get(ld);
 		analysisHdfsFiles(lfss, new LineHandler(){
@@ -129,7 +131,9 @@ public class ReadHive{
 		        		return false;
 		        	int targetValue = lostLd.get(accountId);
 		        	
-		        	double score = lr.classifyScalar(input);
+		        	double score = lr.classifyScalar(input);	
+		        	collector.add(targetValue, score);
+		        	
 					int predictValue = score > Utils.CLASSIFY_VALUE ? 1 : 0;
 					
 					if (targetValue == 1) {
@@ -164,6 +168,8 @@ public class ReadHive{
 		double hitRate = (double) res[0]/(res[0]+res[1]);//命中率
 		out.printf(Locale.ENGLISH, "cover rate:%2.4f   right rate:%2.4f   hit rate:%2.4f  %n"
 				, coverRate, rightRate, hitRate);
+		
+		out.printf(Locale.ENGLISH, "AUC = %.2f%n", collector.auc());
 		
 		double[] tmp = {coverRate, rightRate, hitRate};
 		resMap.put(ld.toString(), tmp);

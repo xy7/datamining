@@ -23,6 +23,7 @@ import java.util.Properties;
 import org.apache.commons.io.Charsets;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.LineIterator;
+import org.apache.mahout.classifier.evaluation.Auc;
 import org.apache.mahout.classifier.sgd.L1;
 import org.apache.mahout.classifier.sgd.OnlineLogisticRegression;
 import org.apache.mahout.math.RandomAccessSparseVector;
@@ -121,6 +122,7 @@ public class LogisticRegressionTrain{
 	
 	private static void evalModel(OnlineLogisticRegression lr, String inputDir){
 		
+		Auc collector = new Auc();
 		Integer[] res = {0, 0, 0, 0};//abcd;
 		
 		File dir = new File(inputDir);
@@ -140,6 +142,7 @@ public class LogisticRegressionTrain{
 				}
 				
 				double score = lr.classifyScalar(input);
+				collector.add(targetValue, score);
 				int predictValue = score > CLASSIFY_VALUE ? 1 : 0;
 
 				if (targetValue == 1) {
@@ -169,6 +172,8 @@ public class LogisticRegressionTrain{
 		double hitRate = (double) res[0]/(res[0]+res[1]);//命中率
 		output.printf(Locale.ENGLISH, "cover rate:%2.4f   right rate:%2.4f   hit rate:%2.4f  %n"
 				, coverRate, rightRate, hitRate);
+		
+		output.printf(Locale.ENGLISH, "AUC = %.2f%n", collector.auc());
 		
 		double[] tmp = {coverRate, rightRate, hitRate};
 		resMap.put(dir.getName(), tmp);
