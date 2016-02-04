@@ -97,14 +97,16 @@ public class LogisticRegressionTrain{
 	}
 
 	private static void evalModel() {
-		OnlineLogisticRegression lr = Utils.loadModelParam(); 
+		OnlineLogisticRegression lr = new OnlineLogisticRegression();
+		Utils.loadModelParam(lr); 
 		
 		evalModel(lr, PREDICT_DIR);
 	}
 	
 	private static void evalModelMutiDir(String dirStr){
 	
-		OnlineLogisticRegression lr = Utils.loadModelParam();
+		OnlineLogisticRegression lr = new OnlineLogisticRegression();
+		Utils.loadModelParam(lr);
 		
 		File dir = new File(dirStr);
 		File[] files = dir.listFiles();
@@ -127,7 +129,7 @@ public class LogisticRegressionTrain{
 		
 		File dir = new File(inputDir);
 		File[] files = dir.listFiles();
-		analysisFiles(files, new LineHandler(){
+		Utils.analysisFiles(files, new LineHandler(){
 
 			@Override
 			public boolean handle(String line) {
@@ -209,7 +211,7 @@ public class LogisticRegressionTrain{
 		lr.learningRate(1e-1);// 1e-3
 		lr.alpha(1 - 1.0e-5);// 学习率的指数衰减率,步长
 
-		analysisFiles(files, new LineHandler(){
+		Utils.analysisFiles(files, new LineHandler(){
 
 			@Override
 			public boolean handle(String line) {
@@ -240,43 +242,6 @@ public class LogisticRegressionTrain{
 		Utils.saveModel(lr);
 
 		return lr;
-	}
-
-	private static void analysisFiles(File[] files, LineHandler handler){
-		analysisFiles(files, handler, 1);
-	}
-	
-	private static void analysisFiles(File[] files, LineHandler handler, int passes){
-		
-		for (int pass = 0; pass < passes; pass++) {
-			int all = 0;
-			int suc = 0;
-			for (File file : files) {
-				if(file.getName().endsWith("crc"))
-					continue;
-				if(file.isDirectory())
-					continue;
-				
-				LineIterator it = null;
-				try {
-					it = FileUtils.lineIterator(file, "UTF-8");
-					while (it.hasNext()) {
-						String line = it.nextLine();
-						all++;
-						if(handler.handle(line) )
-							suc++;
-					}// while lines
-				} catch (IOException e) {
-					output.printf("!!!file read failed: %s %n", e);
-				} finally {
-					if (it != null)
-						LineIterator.closeQuietly(it);
-				}
-			}// for file
-			
-			output.printf(Locale.ENGLISH, "pass %d: all(%d) sucess(%d) %n"
-					, pass, all, suc);
-		}// for pass
 	}
 
 	public static void main(String[] args) {

@@ -1,16 +1,20 @@
 package com.seasun.data.datamining;
 
+import java.io.BufferedReader;
 import java.io.DataInput;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
@@ -19,7 +23,23 @@ import java.util.Map;
 import java.util.Properties;
 
 import org.apache.commons.io.Charsets;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.LineIterator;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocatedFileStatus;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.compress.CompressionCodec;
+import org.apache.hadoop.io.compress.CompressionCodecFactory;
+import org.apache.hadoop.io.compress.CompressionInputStream;
+import org.apache.mahout.classifier.sgd.AbstractOnlineLogisticRegression;
+import org.apache.mahout.classifier.sgd.CrossFoldLearner;
 import org.apache.mahout.classifier.sgd.OnlineLogisticRegression;
+
+import com.github.dataswitch.util.HadoopConfUtil;
 
 public class Utils {
 	
@@ -79,23 +99,21 @@ public class Utils {
 		}
 		
 		out.printf("get %s : %s %n", key, value);
-		
-		String typeName = def.getClass().getName();
-		if(typeName.equals("java.lang.Double")){
+		if(def instanceof Double){
 			Double res = Double.parseDouble(value);
 			return (T)res;
-		} else if(typeName.equals("java.lang.Integer")){
+		} else if(def instanceof Integer){
 			Integer res = Integer.parseInt(value);
 			return (T)res;
-		} else if(typeName.equals("java.lang.Long")){
+		} else if(def instanceof Long){
 			Long res = Long.parseLong(value);
 			return (T)res;
-		} else if(typeName.equals("java.lang.Float")){
+		} else if(def instanceof Float){
 			Float res = Float.parseFloat(value);
 			return (T)res;
-		} else if(typeName.equals("java.lang.String")){
+		} else if(def instanceof String){
 			return (T)value;
-		} else if(typeName.equals("java.lang.Boolean")){
+		} else if(def instanceof Boolean){
 			Boolean res = Boolean.parseBoolean(value);
 			return (T)res;
 		}
@@ -103,9 +121,10 @@ public class Utils {
 		return null;
 	}
 	
-	public static boolean saveModel(OnlineLogisticRegression lr){
+	public static boolean saveModel(Writable lr){
 		
-		out.printf(Locale.ENGLISH, "%s %n", lr.getBeta().toString());
+		if(lr instanceof AbstractOnlineLogisticRegression)
+			out.printf(Locale.ENGLISH, "%s %n", ((AbstractOnlineLogisticRegression)lr).getBeta().toString());
 		
 		try (DataOutputStream modelOutput = new DataOutputStream(new FileOutputStream(MODEL_PARAM_FILE))) {
 			lr.write(modelOutput);
@@ -118,20 +137,29 @@ public class Utils {
 		return true;
 	}
 	
-	public static OnlineLogisticRegression loadModelParam() {
-		OnlineLogisticRegression lr = new OnlineLogisticRegression();
-		
+	public static <T> boolean loadModelParam(T lr) {
+
 		InputStream input = null;
+		
 		try {
 			input = new FileInputStream(MODEL_PARAM_FILE);
 			DataInput in = new DataInputStream(input);
-			lr.readFields(in);
+			if(lr instanceof CrossFoldLearner){
+				((CrossFoldLearner)lr).readFields(in);
+			} else if(lr instanceof OnlineLogisticRegression){
+				((OnlineLogisticRegression)lr).readFields(in);
+			} else {
+				out.println("load model failed, can only load CrossFoldLearner or OnlineLogisticRegression");
+				input.close();
+				return false;
+			}
+			
 			input.close();
 		} catch (Exception e) {
 			e.printStackTrace();
 			out.println("load model param file failed!");
 		}
-		return lr;
+		return true;
 	}
 	
 	//将多天的统计结果打印出来
@@ -190,6 +218,110 @@ public class Utils {
 			return -1*i;
 		}
 		return 0;
+	}
+	
+	public static void analysisFiles(File[] files, LineHandler handler){
+		int all = 0;
+		int suc = 0;
+		for (File file : files) {
+			if(file.getName().endsWith("crc"))
+				continue;
+			if(file.isDirectory())
+				continue;
+			
+			LineIterator it = null;
+			try {
+				it = FileUtils.lineIterator(file, "UTF-8");
+				while (it.hasNext()) {
+					String line = it.nextLine();
+					all++;
+					if(handler.handle(line) )
+						suc++;
+				}// while lines
+			} catch (IOException e) {
+				out.printf("!!!file read failed: %s %n", e);
+			} finally {
+				if (it != null)
+					LineIterator.closeQuietly(it);
+			}
+		}// for file
+		
+		out.printf(Locale.ENGLISH, "analysisFiles: all(%d) sucess(%d) %n"
+				, all, suc);
+	}
+	
+	public static void analysisFiles(File[] files, LineHandler handler, int passes){
+		
+		for (int pass = 0; pass < passes; pass++) {
+			out.printf(Locale.ENGLISH, "pass %d: %n", pass);
+			Utils.analysisFiles(files, handler);
+		}// for pass
+	}
+	
+	private static Configuration conf = HadoopConfUtil.newConf(); 
+	private static CompressionCodecFactory factory = new CompressionCodecFactory(conf); 
+	private static FileSystem hdfs;
+	static {
+		try {
+			hdfs = HadoopConfUtil.getFileSystem(null, null);
+		} catch (IOException e) {
+			e.printStackTrace();
+			out.println(e);
+		}
+	}
+	
+	private final static DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+	private final static String table = "/hive/warehouse/fig.db/fig_app_user/dt=";
+	
+	public static RemoteIterator<LocatedFileStatus> listHdfsFiles(LocalDate ld) {
+		String dayStr = ld.format(formatter);
+		RemoteIterator<LocatedFileStatus> lfss;
+		try {
+			lfss = hdfs.listFiles(
+					new Path(table + dayStr + "/user_type=account" )
+					, true);
+		} catch (IllegalArgumentException | IOException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+			out.println("hdfs.listFIles failed! dayStr: " + dayStr);
+			return null;
+		}
+		return lfss;
+	}
+	
+	public static void analysisHdfsFiles(RemoteIterator<LocatedFileStatus> lfss, LineHandler handler){
+
+		int all = 0;
+		int suc = 0;
+		try {
+			while(lfss.hasNext()){
+				LocatedFileStatus lfs = lfss.next();
+				CompressionCodec codec = factory.getCodec(lfs.getPath() ); 
+				FSDataInputStream in = hdfs.open(lfs.getPath() );
+				BufferedReader br;
+				if(codec == null){
+					br = new BufferedReader(new InputStreamReader(in));
+				} else {
+					CompressionInputStream comInputStream = codec.createInputStream(in);  
+			        br = new BufferedReader(new InputStreamReader(comInputStream));
+				}
+				
+				String line;
+			    while ((line = br.readLine()) != null) {
+			    	all++;
+			    	if(handler.handle(line))
+			    		suc++;
+			    }
+			    br.close();
+			    in.close();
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+			out.println(e);
+		}// for file
+		
+		out.printf(Locale.ENGLISH, "analysisHdfsFiles finish: all(%d) sucess(%d) %n"
+				, all, suc);
 	}
 	
 	public static void main(String[] args) {

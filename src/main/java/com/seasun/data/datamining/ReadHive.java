@@ -1,12 +1,8 @@
 package com.seasun.data.datamining;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -14,31 +10,17 @@ import java.util.Locale;
 import java.util.Map;
 
 import org.apache.commons.io.Charsets;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
-import org.apache.hadoop.io.compress.CompressionCodec;
-import org.apache.hadoop.io.compress.CompressionCodecFactory;
-import org.apache.hadoop.io.compress.CompressionInputStream;
 import org.apache.mahout.classifier.evaluation.Auc;
 import org.apache.mahout.classifier.sgd.L1;
 import org.apache.mahout.classifier.sgd.OnlineLogisticRegression;
 import org.apache.mahout.math.RandomAccessSparseVector;
 import org.apache.mahout.math.Vector;
 
-import com.github.dataswitch.util.HadoopConfUtil;
-
 public class ReadHive{
 	private static String APPID = "1024appid";
-	private static Configuration conf = HadoopConfUtil.newConf(); 
-	private static CompressionCodecFactory factory = new CompressionCodecFactory(conf); 
-	private static FileSystem hdfs;
-	private final static DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-	private final static String table = "/hive/warehouse/fig.db/fig_app_user/dt=";
-	
+
 	private static PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out, Charsets.UTF_8), true);
 	
 	private static Map<LocalDate, Map<String, Integer>> lost = new HashMap<>();
@@ -66,13 +48,6 @@ public class ReadHive{
 				, "last14_login_daycnt"});
 		
 		numFeatures = trainIndex.size() + 2;
-	
-		try {
-			hdfs = HadoopConfUtil.getFileSystem(null, null);
-		} catch (IOException e) {
-			e.printStackTrace();
-			out.println(e);
-		}
 		
 		lr = new OnlineLogisticRegression(2, numFeatures, new L1());
 		lr.lambda(1e-4);// 先验分布的加权因子
@@ -113,14 +88,14 @@ public class ReadHive{
 		out.println("eval: " + ld.toString());
 		getTargetValue(ld);
 		
-		RemoteIterator<LocatedFileStatus> lfss = listHdfsFiles(ld);
+		RemoteIterator<LocatedFileStatus> lfss = Utils.listHdfsFiles(ld);
 		if(lfss == null)
 			return;
 		
 		Auc collector = new Auc();
 		Integer[] res = {0, 0, 0, 0};//abcd;
 		Map<String, Integer> lostLd = lost.get(ld);
-		analysisHdfsFiles(lfss, new LineHandler(){
+		Utils.analysisHdfsFiles(lfss, new LineHandler(){
 			@Override
 			public boolean handle(String line) {
 				String accountId;
@@ -178,14 +153,14 @@ public class ReadHive{
 	private static void train(LocalDate ld){
 		out.println("train: " + ld.toString());
 		getTargetValue(ld);
-		RemoteIterator<LocatedFileStatus> lfss = listHdfsFiles(ld);
+		RemoteIterator<LocatedFileStatus> lfss = Utils.listHdfsFiles(ld);
 		if(lfss == null)
 			return;
 		
 		Map<String, Integer> lostLd = lost.get(ld);
 		int[] res = new int[3];//parse error, get target error, sucess
 		rowstat = new int[]{0, 0, 0, 0, 0};
-		analysisHdfsFiles(lfss, new LineHandler(){
+		Utils.analysisHdfsFiles(lfss, new LineHandler(){
 			@Override
 			public boolean handle(String line) {
 		        Vector input = new RandomAccessSparseVector(numFeatures);
@@ -221,21 +196,6 @@ public class ReadHive{
 		out.printf("parse error: %d, get target error: %d, sucess: %d %n", res[0], res[1], res[2]);
 	}
 
-	private static RemoteIterator<LocatedFileStatus> listHdfsFiles(LocalDate ld) {
-		String dayStr = ld.format(formatter);
-		RemoteIterator<LocatedFileStatus> lfss;
-		try {
-			lfss = hdfs.listFiles(
-					new Path(table + dayStr + "/user_type=account" )
-					, true);
-		} catch (IllegalArgumentException | IOException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-			out.println("hdfs.listFIles failed! dayStr: " + dayStr);
-			return null;
-		}
-		return lfss;
-	}
 
 	private static Map<String, String> lineSplit(String line){
 
@@ -278,12 +238,12 @@ public class ReadHive{
 		out.println("getTargetValue: " + ld.toString());
 		if(lost.containsKey(ld))
 			return;
-		RemoteIterator<LocatedFileStatus> lfss = listHdfsFiles(ld.plusDays(14));
+		RemoteIterator<LocatedFileStatus> lfss = Utils.listHdfsFiles(ld.plusDays(14));
 		if(lfss == null)
 			return;
 		
 		Map<String, Integer> lostLd = new HashMap<>();
-		analysisHdfsFiles(lfss, new LineHandler(){
+		Utils.analysisHdfsFiles(lfss, new LineHandler(){
 			@Override
 			public boolean handle(String line) {
 				try{
@@ -307,42 +267,6 @@ public class ReadHive{
 		});
 		
 		lost.put(ld, lostLd);
-	}
-	
-	
-	private static void analysisHdfsFiles(RemoteIterator<LocatedFileStatus> lfss, LineHandler handler){
-
-		int all = 0;
-		int suc = 0;
-		try {
-			while(lfss.hasNext()){
-				LocatedFileStatus lfs = lfss.next();
-				CompressionCodec codec = factory.getCodec(lfs.getPath() ); 
-				FSDataInputStream in = hdfs.open(lfs.getPath() );
-				BufferedReader br;
-				if(codec == null){
-					br = new BufferedReader(new InputStreamReader(in));
-				} else {
-					CompressionInputStream comInputStream = codec.createInputStream(in);  
-			        br = new BufferedReader(new InputStreamReader(comInputStream));
-				}
-				
-				String line;
-			    while ((line = br.readLine()) != null) {
-			    	all++;
-			    	if(handler.handle(line))
-			    		suc++;
-			    }
-			    br.close();
-			    in.close();
-			}
-		} catch (IOException e) {
-			e.printStackTrace();
-			out.println(e);
-		}// for file
-		
-		out.printf(Locale.ENGLISH, "analysisHdfsFiles finish: all(%d) sucess(%d) %n"
-				, all, suc);
 	}
 	
 	//返回帐号id
