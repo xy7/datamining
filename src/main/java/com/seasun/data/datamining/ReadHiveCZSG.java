@@ -238,7 +238,7 @@ public class ReadHiveCZSG{
 		out.println("getTargetValue: " + ld.toString());
 		if(lost.containsKey(ld))
 			return;
-		RemoteIterator<LocatedFileStatus> lfss = Utils.listHdfsFiles(ld.plusDays(7));
+		RemoteIterator<LocatedFileStatus> lfss = Utils.listHdfsFiles(ld.plusDays(14));
 		if(lfss == null)
 			return;
 		
@@ -253,10 +253,10 @@ public class ReadHiveCZSG{
 					//out.println("line column size: " + cols.size() + "  values: " + cols);
 			    	String accountId = cols.get("account_id");
 
-			    	int last4LoginDaycnt = Integer.parseInt(cols.get("last4_login_daycnt") );
+			    	int last14LoginDaycnt = Integer.parseInt(cols.get("last14_login_daycnt") );
 					int last7LoginDaycnt = Integer.parseInt(cols.get("last7_login_daycnt") );
-					int next3LoginDaycnt = last7LoginDaycnt - last4LoginDaycnt;
-					int targetValue = last4LoginDaycnt<=0 && next3LoginDaycnt>0?1:0;
+					int next7LoginDaycnt = last14LoginDaycnt - last7LoginDaycnt;
+					int targetValue = last7LoginDaycnt<=0 && next7LoginDaycnt>0?1:0;
 					lostLd.put(accountId, targetValue);
 					return true;
 				} catch(NullPointerException e) {
