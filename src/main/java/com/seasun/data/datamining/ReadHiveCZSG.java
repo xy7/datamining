@@ -209,6 +209,8 @@ public class ReadHiveCZSG{
 		out.printf("columns size too small or appid not %s: %d, first_login_date error: %d, uptodate < 14: %d, last14LoginDaycnt not in[2,13]: %d  %n"
 				, APPID, rowstat[0], rowstat[1], rowstat[2], rowstat[3]);
 		out.printf("parse error: %d, get target error: %d, sucess: %d %n", res[0], res[1], res[2]);
+		
+		eval(ld);
 	}
 
 
