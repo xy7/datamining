@@ -49,7 +49,7 @@ public class ReadHiveCZSG{
 		
 		numFeatures = trainIndex.size() + 2;
 		
-		lr = new OnlineLogisticRegression(2, numFeatures, new L1());
+		lr = new OnlineLogisticRegression(3, numFeatures, new L1());
 		lr.lambda(1e-4);// 先验分布的加权因子
 		lr.learningRate(1e-1);// 1e-3
 		lr.alpha(1 - 1.0e-5);// 学习率的指数衰减率,步长
@@ -256,7 +256,14 @@ public class ReadHiveCZSG{
 			    	int last14LoginDaycnt = Integer.parseInt(cols.get("last14_login_daycnt") );
 					int last7LoginDaycnt = Integer.parseInt(cols.get("last7_login_daycnt") );
 					int next7LoginDaycnt = last14LoginDaycnt - last7LoginDaycnt;
-					int targetValue = last7LoginDaycnt<=0 && next7LoginDaycnt>0?1:0;
+					
+					int targetValue = 0;
+					if(next7LoginDaycnt > 0 && last7LoginDaycnt > 0){
+						targetValue = 2;
+					} else if(next7LoginDaycnt > 0 && last7LoginDaycnt == 0){
+						targetValue = 1;
+					}
+
 					lostLd.put(accountId, targetValue);
 					return true;
 				} catch(NullPointerException e) {
@@ -309,7 +316,7 @@ public class ReadHiveCZSG{
 		}
 		
 		int last14LoginDaycnt = Integer.parseInt( cols.get("last14_login_daycnt") );
-		if(last14LoginDaycnt <= 1 || last14LoginDaycnt > 13){
+		if(last14LoginDaycnt < 2 || last14LoginDaycnt > 13){
 			//out.println("last7LoginDaycnt < 1");
 			rowstat[3]++;
 			return null;
