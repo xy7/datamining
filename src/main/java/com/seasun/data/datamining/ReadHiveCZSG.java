@@ -191,7 +191,7 @@ public class ReadHiveCZSG{
 			}
 		});
 		
-		out.printf("columns size too small or appid not %s: %d, first_login_date error: %d, uptodate < 14: %d, last7LoginDaycnt < 1: %d  %n"
+		out.printf("columns size too small or appid not %s: %d, first_login_date error: %d, uptodate < 14: %d, last14LoginDaycnt not in[2,13]: %d  %n"
 				, APPID, rowstat[0], rowstat[1], rowstat[2], rowstat[3]);
 		out.printf("parse error: %d, get target error: %d, sucess: %d %n", res[0], res[1], res[2]);
 	}
@@ -305,6 +305,13 @@ public class ReadHiveCZSG{
 		if(uptodate < 14){
 			//out.println("uptodate < 14: " + firstLoginDate);
 			rowstat[2]++;
+			return null;
+		}
+		
+		int last14LoginDaycnt = Integer.parseInt( cols.get("last14_login_daycnt") );
+		if(last14LoginDaycnt <= 1 || last14LoginDaycnt > 13){
+			//out.println("last7LoginDaycnt < 1");
+			rowstat[3]++;
 			return null;
 		}
 	
