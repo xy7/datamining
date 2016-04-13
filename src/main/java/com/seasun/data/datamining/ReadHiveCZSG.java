@@ -79,7 +79,7 @@ public class ReadHiveCZSG{
 			eval(ld);
 		}
 		
-		Utils.printEvalRes(resMap);
+		//Utils.printEvalRes(resMap);
 	}
 	
 	private static Map<String, double[]> resMap = new HashMap<>();
@@ -123,11 +123,11 @@ public class ReadHiveCZSG{
 						if (predictValue == 1) {
 							res[0]++; //将流失用户预测正确
 						} else {
-							res[2]++; //将流失用户预测错误
+							res[1]++; //将流失用户预测错误
 						}
 					} else if(targetValue == 2){
 						if (predictValue == 2) {
-							res[1]++; //留存用户预测正确
+							res[2]++; //留存用户预测正确
 						} else {
 							res[3]++; //留存用户预测错误
 						}
@@ -153,16 +153,16 @@ public class ReadHiveCZSG{
 		out.printf("C:%2.4f	D:%2.4f %n", (double)res[2]/all, (double)res[3]/all);
 		out.printf("E:%2.4f	F:%2.4f %n", (double)res[4]/all, (double)res[5]/all);
 
-		double coverRate = (double) res[0]/(res[0]+res[2]);//覆盖率
-		double rightRate = (double) (res[0]+res[3])/all;//正确率
-		double hitRate = (double) res[0]/(res[0]+res[1]);//命中率
-		out.printf(Locale.ENGLISH, "cover rate:%2.4f   right rate:%2.4f   hit rate:%2.4f  %n"
-				, coverRate, rightRate, hitRate);
+		//double coverRate = (double) res[0]/(res[0]+res[2]);//覆盖率
+		//double rightRate = (double) (res[0]+res[3])/all;//正确率
+		//double hitRate = (double) res[0]/(res[0]+res[1]);//命中率
+		//out.printf(Locale.ENGLISH, "cover rate:%2.4f   right rate:%2.4f   hit rate:%2.4f  %n"
+			//	, coverRate, rightRate, hitRate);
 		
 		//out.printf(Locale.ENGLISH, "AUC = %.2f%n", collector.auc());
 		
-		double[] tmp = {coverRate, rightRate, hitRate};
-		resMap.put(ld.toString(), tmp);
+		//double[] tmp = {coverRate, rightRate, hitRate};
+		//resMap.put(ld.toString(), tmp);
 	}
 
 	private static void train(LocalDate ld){
@@ -200,7 +200,13 @@ public class ReadHiveCZSG{
 				}
 
 				// now update model
-				lr.train(targetValue, input);
+				//将流失用户训练3次增加样本
+				if(targetValue == 1){
+					for(int i=0;i<3;i++)
+						lr.train(targetValue, input);
+				} else
+					lr.train(targetValue, input);
+				
 				res[2]++;
 		        return true;
 			}
