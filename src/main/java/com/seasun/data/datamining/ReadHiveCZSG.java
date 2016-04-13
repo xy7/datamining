@@ -93,7 +93,7 @@ public class ReadHiveCZSG{
 			return;
 		
 		Auc collector = new Auc();
-		Integer[] res = {0, 0, 0, 0};//abcd;
+		Integer[] res = {0, 0, 0, 0, 0, 0};//abcd;
 		Map<String, Integer> lostLd = lost.get(ld);
 		Utils.analysisHdfsFiles(lfss, new LineHandler(){
 			@Override
@@ -106,22 +106,36 @@ public class ReadHiveCZSG{
 		        		return false;
 		        	int targetValue = lostLd.get(accountId);
 		        	
-		        	double score = lr.classifyScalar(input);	
-		        	collector.add(targetValue, score);
+		        	Vector score = lr.classify(input);	
+		        	//collector.add(targetValue, score);
 		        	
-					int predictValue = score > Utils.CLASSIFY_VALUE ? 1 : 0;
+		        	double s1 = score.get(0);
+		        	double s2 = score.get(1);
+		        	double s0 = 1 - s1 - s2;
+		        	
+					int predictValue = 0;
+					if(s1 >= s2 && s1 >= s0)
+						predictValue = 1;
+					if(s2 > s1 && s2 > s0)
+						predictValue = 2;
 					
 					if (targetValue == 1) {
 						if (predictValue == 1) {
-							res[0]++; //流失用户预测正确
+							res[0]++; //将流失用户预测正确
 						} else {
-							res[2]++; //流失用户预测错误
+							res[2]++; //将流失用户预测错误
 						}
-					} else {
-						if (predictValue == 1) {
-							res[1]++; //非流失用户预测错误
+					} else if(targetValue == 2){
+						if (predictValue == 2) {
+							res[1]++; //留存用户预测正确
 						} else {
-							res[3]++; //非流失用户预测正确
+							res[3]++; //留存用户预测错误
+						}
+					} else{
+						if (predictValue == 0) {
+							res[4]++; //流失用户预测正确
+						} else {
+							res[5]++; //流失用户预测错误
 						}
 					}
 				} catch (Exception e) {
@@ -133,10 +147,11 @@ public class ReadHiveCZSG{
 			}
 		});
 		
-		int all = res[0] + res[1] + res[2] + res[3];
+		int all = res[0] + res[1] + res[2] + res[3] + res[4] + res[5];
 		out.printf("result matrix: lostcnt:%d	remaincnt:%d%n", res[0]+res[2], res[1]+res[3]);
 		out.printf("A:%2.4f	B:%2.4f %n", (double)res[0]/all, (double)res[1]/all);
 		out.printf("C:%2.4f	D:%2.4f %n", (double)res[2]/all, (double)res[3]/all);
+		out.printf("E:%2.4f	F:%2.4f %n", (double)res[4]/all, (double)res[5]/all);
 
 		double coverRate = (double) res[0]/(res[0]+res[2]);//覆盖率
 		double rightRate = (double) (res[0]+res[3])/all;//正确率
@@ -144,7 +159,7 @@ public class ReadHiveCZSG{
 		out.printf(Locale.ENGLISH, "cover rate:%2.4f   right rate:%2.4f   hit rate:%2.4f  %n"
 				, coverRate, rightRate, hitRate);
 		
-		out.printf(Locale.ENGLISH, "AUC = %.2f%n", collector.auc());
+		//out.printf(Locale.ENGLISH, "AUC = %.2f%n", collector.auc());
 		
 		double[] tmp = {coverRate, rightRate, hitRate};
 		resMap.put(ld.toString(), tmp);
@@ -257,10 +272,10 @@ public class ReadHiveCZSG{
 					int last7LoginDaycnt = Integer.parseInt(cols.get("last7_login_daycnt") );
 					int next7LoginDaycnt = last14LoginDaycnt - last7LoginDaycnt;
 					
-					int targetValue = 0;
-					if(next7LoginDaycnt > 0 && last7LoginDaycnt > 0){
+					int targetValue = 0;//流失用户
+					if(next7LoginDaycnt > 0 && last7LoginDaycnt > 0){//留存用户
 						targetValue = 2;
-					} else if(next7LoginDaycnt > 0 && last7LoginDaycnt == 0){
+					} else if(next7LoginDaycnt > 0 && last7LoginDaycnt == 0){//将流失用户
 						targetValue = 1;
 					}
 
