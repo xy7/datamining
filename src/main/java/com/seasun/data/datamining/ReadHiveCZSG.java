@@ -255,11 +255,11 @@ public class ReadHiveCZSG {
 
 		// now update model
 		// 将流失用户训练3次增加样本
-		// if(targetValue == 1){
-		// for(int i=0;i<3;i++)
-		// lr.train(targetValue, input);
-		// } else
-		lr.train(targetValue, input);
+		 if(targetValue == 1){
+			 for(int i=0;i<100;i++)
+				 lr.train(targetValue, input);
+		 } else
+			 lr.train(targetValue, input);
 	}
 
 	private static Map<String, String> lineSplit(String line) {
