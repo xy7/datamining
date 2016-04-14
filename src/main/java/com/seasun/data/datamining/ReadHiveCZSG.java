@@ -345,7 +345,7 @@ public class ReadHiveCZSG {
 		out.println("getTargetValue: " + ld.toString());
 		if (lost.containsKey(ld))
 			return;
-		RemoteIterator<LocatedFileStatus> lfss = Utils.listHdfsFiles(ld.plusDays(14));
+		RemoteIterator<LocatedFileStatus> lfss = Utils.listHdfsFiles(ld.plusDays(7));
 		if (lfss == null)
 			return;
 
@@ -361,8 +361,8 @@ public class ReadHiveCZSG {
 					// "  values: " + cols);
 					String accountId = cols.get("account_id");
 
-					int last14LoginDaycnt = Integer.parseInt(cols.get("last14_login_daycnt"));
-					int last7LoginDaycnt = Integer.parseInt(cols.get("last7_login_daycnt"));
+					int last14LoginDaycnt = Integer.parseInt(cols.get("last7_login_daycnt"));
+					int last7LoginDaycnt = Integer.parseInt(cols.get("last4_login_daycnt"));
 					int next7LoginDaycnt = last14LoginDaycnt - last7LoginDaycnt;
 
 					int targetValue = 0;// 流失用户
