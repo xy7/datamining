@@ -143,7 +143,7 @@ public class ReadHiveCZSG {
 
 	private static void eval(LocalDate ld) {
 		out.println("eval: " + ld.toString());
-		Integer[] res = { 0, 0, 0, 0, 0, 0 };// abcd;
+		Integer[][] res = { {0, 0, 0}, {0, 0, 0}, {0, 0, 0} };// abcd;
 
 		if (ldSamples.containsKey(ld)) {
 			List<Sample> samples = ldSamples.get(ld);
@@ -188,15 +188,22 @@ public class ReadHiveCZSG {
 
 		} // else
 
-		int all = res[0] + res[1] + res[2] + res[3] + res[4] + res[5];
-		out.printf("result matrix: lostcnt:%d	remaincnt:%d%n", res[0] + res[2], res[1] + res[3]);
-		out.printf("retain   T:%2.4f	F:%2.4f %n", (double) res[0] / all, (double) res[3] / all);
-		out.printf("may lost T:%2.4f	F:%2.4f %n", (double) res[1] / all, (double) res[4] / all);
-		out.printf("lost     T:%2.4f	F:%2.4f %n", (double) res[2] / all, (double) res[5] / all);
-
+		int all = 0;
+		for(int i=0;i<3;i++)
+			for(int j=0;j<3;j++)
+				all += res[i][j];
+		
+		out.println("result matrix:");
+		for(int i=0;i<3;i++){
+			for(int j=0;j<3;j++){
+				out.printf("%2.4f \t", (double) res[i][j] / all);
+			}
+			out.printf("%n");
+		}
+		
 	}
 
-	private static void evalSample(Sample sample, Integer[] res) {
+	private static void evalSample(Sample sample, Integer[][] res) {
 		Vector input = sample.input;
 		int targetValue = sample.targetValue;
 
@@ -211,11 +218,9 @@ public class ReadHiveCZSG {
 			predictValue = 1;
 		if (s2 > s1 && s2 > s0)
 			predictValue = 2;
+		
+		res[targetValue][predictValue] ++;
 
-		if (targetValue == predictValue)
-			res[targetValue]++;
-		else
-			res[targetValue + 3]++;
 	}
 
 	private static void train(LocalDate ld) {
@@ -345,7 +350,7 @@ public class ReadHiveCZSG {
 		out.println("getTargetValue: " + ld.toString());
 		if (lost.containsKey(ld))
 			return;
-		RemoteIterator<LocatedFileStatus> lfss = Utils.listHdfsFiles(ld.plusDays(7));
+		RemoteIterator<LocatedFileStatus> lfss = Utils.listHdfsFiles(ld.plusDays(14));
 		if (lfss == null)
 			return;
 
@@ -361,8 +366,8 @@ public class ReadHiveCZSG {
 					// "  values: " + cols);
 					String accountId = cols.get("account_id");
 
-					int last14LoginDaycnt = Integer.parseInt(cols.get("last7_login_daycnt"));
-					int last7LoginDaycnt = Integer.parseInt(cols.get("last4_login_daycnt"));
+					int last14LoginDaycnt = Integer.parseInt(cols.get("last14_login_daycnt"));
+					int last7LoginDaycnt = Integer.parseInt(cols.get("last7_login_daycnt"));
 					int next7LoginDaycnt = last14LoginDaycnt - last7LoginDaycnt;
 
 					int targetValue = 0;// 流失用户
