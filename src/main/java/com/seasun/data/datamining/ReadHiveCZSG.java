@@ -1,7 +1,14 @@
 package com.seasun.data.datamining;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
+import java.io.Serializable;
 import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -13,7 +20,6 @@ import java.util.Map;
 import org.apache.commons.io.Charsets;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.RemoteIterator;
-import org.apache.mahout.classifier.evaluation.Auc;
 import org.apache.mahout.classifier.sgd.L1;
 import org.apache.mahout.classifier.sgd.OnlineLogisticRegression;
 import org.apache.mahout.math.RandomAccessSparseVector;
@@ -55,7 +61,7 @@ public class ReadHiveCZSG {
 		lr.learningRate(1e-1);// 1e-3
 		lr.alpha(1 - 1.0e-5);// 学习率的指数衰减率,步长
 	}
-	
+
 	private static int SCORE_FREQ;
 
 	public static void main(String[] args) throws Exception {
@@ -64,6 +70,16 @@ public class ReadHiveCZSG {
 		APPID = Utils.getOrDefault("appid", APPID);
 		SCORE_FREQ = Utils.getOrDefault("score_freq", 0);
 		MAY_LOST_REPEAT_CNT = Utils.getOrDefault("may_lost_repeat_cnt", 1);
+
+		String serialFileName = Utils.getOrDefault("serial_file_name", "./czsg_serial_data.out");
+
+		File file = new File(serialFileName);
+		if (file.exists()) {
+			out.println("serial file exists read to Map");
+			ObjectInputStream in = new ObjectInputStream(new FileInputStream(file));
+			ldSamples = (Map<LocalDate, List<Sample>>) in.readObject();
+			in.close();
+		}
 
 		LocalDate start = LocalDate.parse(Utils.getOrDefault("train_start", "2015-11-01"));
 		LocalDate end = LocalDate.parse(Utils.getOrDefault("train_end", "2015-11-01"));
@@ -84,16 +100,43 @@ public class ReadHiveCZSG {
 			eval(ld);
 		}
 
+		if (!file.exists()) {
+			out.println("serial file not exists, now write to it");
+			ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(file));
+			out.writeObject(ldSamples);
+			out.close();
+		}
+
 	}
-	
-	static class Sample {
+
+	static class Sample implements Serializable {
+		private static final long serialVersionUID = -5983545824659336774L;
 		public int targetValue;
-		public Vector input;
+		public transient Vector input;
 
 		public Sample(int targetValue, Vector input) {
 			this.targetValue = targetValue;
 			this.input = input;
 		}
+
+		private void writeObject(ObjectOutputStream out) throws IOException {
+			out.defaultWriteObject();
+			for (int i = 0; i < numFeatures; i++)
+				out.writeDouble(input.get(i));
+		}
+
+		private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
+			in.defaultReadObject();
+			input = new RandomAccessSparseVector(numFeatures);
+			for (int i = 0; i < numFeatures; i++)
+				input.setQuick(i, in.readDouble());
+		}
+
+		@Override
+		public String toString() {
+			return "Sample [targetValue=" + targetValue + ", input=" + input + "]";
+		}
+
 	}
 
 	private static Map<LocalDate, List<Sample>> ldSamples = new HashMap<>();
@@ -133,7 +176,6 @@ public class ReadHiveCZSG {
 						samples.add(sample);
 
 						evalSample(sample, res);
-						
 
 					} catch (Exception e) {
 						// e.printStackTrace();
@@ -144,7 +186,7 @@ public class ReadHiveCZSG {
 				}
 			});
 
-		} //else
+		} // else
 
 		int all = res[0] + res[1] + res[2] + res[3] + res[4] + res[5];
 		out.printf("result matrix: lostcnt:%d	remaincnt:%d%n", res[0] + res[2], res[1] + res[3]);
@@ -169,15 +211,12 @@ public class ReadHiveCZSG {
 			predictValue = 1;
 		if (s2 > s1 && s2 > s0)
 			predictValue = 2;
-		
-		
-		if(targetValue == predictValue)
+
+		if (targetValue == predictValue)
 			res[targetValue]++;
 		else
-			res[targetValue+3]++;
+			res[targetValue + 3]++;
 	}
-
-	
 
 	private static void train(LocalDate ld) {
 		out.println("train: " + ld.toString());
@@ -239,15 +278,16 @@ public class ReadHiveCZSG {
 
 	private static int sampleCnt = 0;
 	private static int MAY_LOST_REPEAT_CNT;
+
 	private static void trainSample(Sample sample) {
 		int targetValue = sample.targetValue;
 		Vector input = sample.input;
-		if ( SCORE_FREQ != 0 && (++sampleCnt) % SCORE_FREQ == 0) {
+		if (SCORE_FREQ != 0 && (++sampleCnt) % SCORE_FREQ == 0) {
 			// check performance while this is still news
 			double logP = lr.logLikelihood(targetValue, input);
 			Vector vec = lr.classify(input);
 			double p;
-			if(targetValue >=1)
+			if (targetValue >= 1)
 				p = vec.get(targetValue - 1);
 			else
 				p = 1 - vec.get(0) - vec.get(1);
@@ -257,11 +297,11 @@ public class ReadHiveCZSG {
 
 		// now update model
 		// 将流失用户训练3次增加样本
-		 if(targetValue == 1){
-			 for(int i = 0; i < MAY_LOST_REPEAT_CNT; i++)
-				 lr.train(targetValue, input);
-		 } else
-			 lr.train(targetValue, input);
+		if (targetValue == 1) {
+			for (int i = 0; i < MAY_LOST_REPEAT_CNT; i++)
+				lr.train(targetValue, input);
+		} else
+			lr.train(targetValue, input);
 	}
 
 	private static Map<String, String> lineSplit(String line) {
