@@ -63,6 +63,7 @@ public class ReadHiveCZSG {
 		Utils.loadConfigFile("./config.properties.hive");
 		APPID = Utils.getOrDefault("appid", APPID);
 		SCORE_FREQ = Utils.getOrDefault("score_freq", 0);
+		MAY_LOST_REPEAT_CNT = Utils.getOrDefault("may_lost_repeat_cnt", 1);
 
 		LocalDate start = LocalDate.parse(Utils.getOrDefault("train_start", "2015-11-01"));
 		LocalDate end = LocalDate.parse(Utils.getOrDefault("train_end", "2015-11-01"));
@@ -237,6 +238,7 @@ public class ReadHiveCZSG {
 	}
 
 	private static int sampleCnt = 0;
+	private static int MAY_LOST_REPEAT_CNT;
 	private static void trainSample(Sample sample) {
 		int targetValue = sample.targetValue;
 		Vector input = sample.input;
@@ -256,7 +258,7 @@ public class ReadHiveCZSG {
 		// now update model
 		// 将流失用户训练3次增加样本
 		 if(targetValue == 1){
-			 for(int i=0;i<100;i++)
+			 for(int i = 0; i < MAY_LOST_REPEAT_CNT; i++)
 				 lr.train(targetValue, input);
 		 } else
 			 lr.train(targetValue, input);
