@@ -243,7 +243,12 @@ public class ReadHiveCZSG {
 		if ( SCORE_FREQ != 0 && (++sampleCnt) % SCORE_FREQ == 0) {
 			// check performance while this is still news
 			double logP = lr.logLikelihood(targetValue, input);
-			double p = lr.classifyScalar(input);
+			Vector vec = lr.classify(input);
+			double p;
+			if(targetValue >=1)
+				p = vec.get(targetValue - 1);
+			else
+				p = 1 - vec.get(0) - vec.get(1);
 			out.printf(Locale.ENGLISH, "sampleCnt: %d  %2d  %1.4f  |  %2.6f %10.4f%n",
 					sampleCnt, targetValue, p, lr.currentLearningRate(), logP);
 		}
