@@ -148,17 +148,17 @@ public class ReadHiveCZSG {
 					Map<String, Integer> cols = new HashMap<>();
 					String accountId = lineSplit(line, ldFinal, cols);
 
-					if(cols.size() < 60){
-						res[1]++;
+					if(cols.size() < 50){
+						res[0]++;
 						return false;
 					}
 					
 					if(accountId == null){
-						res[2]++;
+						res[1]++;
 						return false;
 					}
 
-					res[3]++;
+					res[2]++;
 					accountMaps.put(accountId, cols);
 
 					return true;
@@ -168,7 +168,7 @@ public class ReadHiveCZSG {
 			ldAccountMaps.put(ld, accountMaps);
 
 			out.printf(
-					"columns size too small: %d, appid != %s: %d, get accountId  error: %d, sucess: %d  %n"
+					"columns size too small: %d, appid != %s or first_login_date error: %d, sucess: %d  %n"
 					, res[0], APPID, res[1], res[2], res[3]);
 		}
 	}
@@ -281,7 +281,7 @@ public class ReadHiveCZSG {
 
 		String mapStr = cols[4];
 		String mapInt = cols[5];
-		Map<String, String> strMap = parse2map(mapStr, " ");
+		Map<String, String> strMap = parse2map(mapStr);
 		
 		String fistLoginDate = strMap.get("first_login_date");
 		if (fistLoginDate == null || fistLoginDate.length() != 10) {
@@ -293,32 +293,36 @@ public class ReadHiveCZSG {
 		res.put("up_to_date", uptodate);
 
 		//res.putAll(parse2map(mapStr));
-		res.putAll(parse2map(mapInt, 1));
+		res.putAll(parse2mapint(mapInt));
 
 		return accountId;
 	}
 
-	private static <T> Map parse2map(String mapInt, T t) {
+	private static Map<String, String> parse2map(String mapInt) {
 		String[] intCols = mapInt.split("\2");
-		Map res = new HashMap<>();
+		Map<String, String> res = new HashMap<>();
 		for (String col : intCols) {
 			// out.println("167: " + col);
 			String[] kv = col.split("\3");
-			String value = "";
+			String value = "\\N";
 			if (kv.length >= 2)
 				value = kv[1];
 			
-			if(t instanceof Integer){
-				if (value.equals("\\N"))// null值替换为0
-					res.put(kv[0], 0 );
-				else
-					res.put(kv[0], Integer.parseInt(value) );
-			} else{
-				res.put(kv[0], value);
-			}
-
-			
+			res.put(kv[0], value);
 		}
+		return res;
+	}
+	
+	private static Map<String, Integer> parse2mapint(String mapInt) {
+		Map<String, String> map = parse2map(mapInt);
+		Map<String, Integer> res = new HashMap<>();
+		for(String k:map.keySet()){
+			if (map.get(k).equals("\\N"))// null值替换为0
+				res.put(k, 0);
+			else 
+				res.put(k, Integer.parseInt(map.get(k)));
+		}
+
 		return res;
 	}
 
