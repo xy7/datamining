@@ -26,6 +26,8 @@ import org.apache.mahout.math.RandomAccessSparseVector;
 import org.apache.mahout.math.Vector;
 
 public class ReadHiveCZSG {
+	private static int RETAIN_THRESHOLD = 15;
+
 	private static String APPID = "1024appid";
 
 	private static PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out, Charsets.UTF_8), true);
@@ -70,6 +72,7 @@ public class ReadHiveCZSG {
 		APPID = Utils.getOrDefault("appid", APPID);
 		SCORE_FREQ = Utils.getOrDefault("score_freq", 0);
 		MAY_LOST_REPEAT_CNT = Utils.getOrDefault("may_lost_repeat_cnt", 1);
+		RETAIN_THRESHOLD = Utils.getOrDefault("retain_threshold", 15);
 
 		String serialFileName = Utils.getOrDefault("serial_file_name", "./czsg_serial_data.out");
 
@@ -372,7 +375,7 @@ public class ReadHiveCZSG {
 					int last30LoginDaycnt = Integer.parseInt(cols.get("last30_login_daycnt"));
 
 					int targetValue = 1;// 将流失用户
-					if (last30LoginDaycnt > 15) {// 留存用户
+					if (last30LoginDaycnt > RETAIN_THRESHOLD) {// 留存用户
 						targetValue = 2;
 					} else if (last30LoginDaycnt == 0 ) {// 流失用户
 						targetValue = 0;
