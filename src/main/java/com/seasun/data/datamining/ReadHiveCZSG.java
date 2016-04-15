@@ -26,6 +26,8 @@ import org.apache.mahout.math.RandomAccessSparseVector;
 import org.apache.mahout.math.Vector;
 
 public class ReadHiveCZSG {
+	private static final int TARGET_AFTTER_DAYS = 30;
+
 	private static int RETAIN_THRESHOLD = 15;
 
 	private static String APPID = "1024appid";
@@ -66,7 +68,7 @@ public class ReadHiveCZSG {
 
 	private static int SCORE_FREQ;
 
-	private static Map<LocalDate, Map<String, Map<String, String>>> ldAccountMaps = new HashMap<>();
+	private static Map<LocalDate, Map<String, Map<String, Integer>>> ldAccountMaps = new HashMap<>();
 	
 	public static void main(String[] args) throws Exception {
 
@@ -89,14 +91,17 @@ public class ReadHiveCZSG {
 		File file = new File(serialFileName);
 		if (!file.exists()) {
 			out.println("serial file not exists, now write to it");
-			loadAllHiveData(start, evalEnd);
+			loadAllHiveData(start, end);
+			loadAllHiveData(start.plusDays(TARGET_AFTTER_DAYS), end.plusDays(TARGET_AFTTER_DAYS));
+			loadAllHiveData(evalStart, evalEnd);
+			loadAllHiveData(evalStart.plusDays(TARGET_AFTTER_DAYS), evalEnd.plusDays(TARGET_AFTTER_DAYS));
 			ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(file));
 			out.writeObject(ldAccountMaps);
 			out.close();
 		} else{
 			out.println("serial file exists read to Map");
 			ObjectInputStream in = new ObjectInputStream(new FileInputStream(file));
-			ldAccountMaps = (Map<LocalDate, Map<String, Map<String, String>>>) in.readObject();
+			ldAccountMaps = (Map<LocalDate, Map<String, Map<String, Integer>>>) in.readObject();
 			in.close();
 		}
 		//step2/3, train data
@@ -123,6 +128,9 @@ public class ReadHiveCZSG {
 	//1, load all of hive data to map, write to local file
 	private static void loadAllHiveData(LocalDate ld1, LocalDate ld2){
 		for (LocalDate ld = ld1; !ld.isAfter(ld2); ld = ld.plusDays(1)) {
+			out.println("load hive data: " + ld.toString());
+			if(ldAccountMaps.containsKey(ld))
+				continue;
 			
 			RemoteIterator<LocatedFileStatus> lfss = Utils.listHdfsFiles(ld);
 			if (lfss == null)
@@ -130,25 +138,21 @@ public class ReadHiveCZSG {
 			
 			int[] res = { 0, 0, 0, 0 };// parse error, get accountId error, sucess
 	
-			Map<String, Map<String, String>> accountMaps = new HashMap<>();
+			Map<String, Map<String, Integer>> accountMaps = new HashMap<>();
 			
+			final LocalDate ldFinal = ld;
 			Utils.analysisHdfsFiles(lfss, new LineHandler() {
 				@Override
 				public boolean handle(String line) {
 	
-					Map<String, String> cols = lineSplit(line);
-					
-					if (cols == null ){
-						res[0]++;
-						return false;
-					}
-					
+					Map<String, Integer> cols = new HashMap<>();
+					String accountId = lineSplit(line, ldFinal, cols);
+
 					if(cols.size() < 60){
 						res[1]++;
 						return false;
 					}
 					
-					String accountId = cols.get("account_id");
 					if(accountId == null){
 						res[2]++;
 						return false;
@@ -173,11 +177,11 @@ public class ReadHiveCZSG {
 		out.println("eval: " + ld.toString());
 		Integer[][] res = { {0, 0, 0}, {0, 0, 0}, {0, 0, 0} };// abcd;
 		
-		Map<String, Map<String, String>> samples = ldAccountMaps.get(ld);
-		for(Map<String, String> sample:samples.values()){
-			Vector input = new RandomAccessSparseVector(numFeatures);
-			String accountId = parseColumnMap(sample, input, ld);
-			if(accountId == null)
+		Map<String, Map<String, Integer>> samples = ldAccountMaps.get(ld);
+		for(Map.Entry<String, Map<String, Integer>> sample:samples.entrySet() ){
+			String accountId = sample.getKey();
+			Vector input = parseColumnMap(sample.getValue(), ld);
+			if(input == null)
 				continue;
 				
 			int targetValue = getTargetValue(ld, accountId);
@@ -220,11 +224,12 @@ public class ReadHiveCZSG {
 		out.println("train: " + ld.toString());
 		int sampleCnt = 0;
 		rowstat = new int[] { 0, 0, 0, 0, 0 };
-		Map<String, Map<String, String>> samples = ldAccountMaps.get(ld);
-		for(Map<String, String> sample:samples.values()){
-			Vector input = new RandomAccessSparseVector(numFeatures);
-			String accountId = parseColumnMap(sample, input, ld);
-			if(accountId == null)
+		Map<String, Map<String, Integer>> samples = ldAccountMaps.get(ld);
+		for(Map.Entry<String, Map<String, Integer>> sample:samples.entrySet() ){
+			new RandomAccessSparseVector(numFeatures);
+			String accountId = sample.getKey();
+			Vector input = parseColumnMap(sample.getValue(), ld);
+			if(input == null)
 				continue;
 				
 			int targetValue = getTargetValue(ld, accountId);
@@ -260,39 +265,59 @@ public class ReadHiveCZSG {
 
 	}
 
-	private static Map<String, String> lineSplit(String line) {
+	private static String lineSplit(String line, LocalDate ld, Map<String, Integer> res) {
 
 		String[] cols = line.split("\1");
 		String appId = cols[0];
 		if (!appId.equals(APPID))
 			return null;
-		Map<String, String> res = new HashMap<>();
+		
+		String accountId = cols[1];
 
-		res.put("app_id", cols[0]);
-		res.put("account_id", cols[1]);
-		res.put("device_id", cols[2]);
-		res.put("mac", cols[3]);
+		//res.put("app_id", cols[0]);
+		//res.put("account_id", cols[1]);
+		//res.put("device_id", cols[2]);
+		//res.put("mac", cols[3]);
 
 		String mapStr = cols[4];
 		String mapInt = cols[5];
+		Map<String, String> strMap = parse2map(mapStr, " ");
+		
+		String fistLoginDate = strMap.get("first_login_date");
+		if (fistLoginDate == null || fistLoginDate.length() != 10) {
+			// out.println("fistLoginDate format error: " + fistLoginDate);
+			return null;
+		}
+		LocalDate firstLoginDate = LocalDate.parse(fistLoginDate);
+		int uptodate = Utils.dateDiff(ld, firstLoginDate);
+		res.put("up_to_date", uptodate);
 
-		res.putAll(parse2map(mapStr));
-		res.putAll(parse2map(mapInt));
+		//res.putAll(parse2map(mapStr));
+		res.putAll(parse2map(mapInt, 1));
 
-		return res;
+		return accountId;
 	}
 
-	private static Map<String, String> parse2map(String mapInt) {
+	private static <T> Map parse2map(String mapInt, T t) {
 		String[] intCols = mapInt.split("\2");
-		Map<String, String> res = new HashMap<>();
+		Map res = new HashMap<>();
 		for (String col : intCols) {
 			// out.println("167: " + col);
 			String[] kv = col.split("\3");
 			String value = "";
 			if (kv.length >= 2)
 				value = kv[1];
+			
+			if(t instanceof Integer){
+				if (value.equals("\\N"))// null值替换为0
+					res.put(kv[0], 0 );
+				else
+					res.put(kv[0], Integer.parseInt(value) );
+			} else{
+				res.put(kv[0], value);
+			}
 
-			res.put(kv[0], value);
+			
 		}
 		return res;
 	}
@@ -302,15 +327,15 @@ public class ReadHiveCZSG {
 	private static int getTargetValue(LocalDate ld, String accountId) {
 		
 		try {
-			Map<String, String> cols = ldAccountMaps.get(ld.plusDays(30)).get(accountId);
+			Map<String, Integer> cols = ldAccountMaps.get(ld.plusDays(TARGET_AFTTER_DAYS)).get(accountId);
 			if (cols == null){
 				rowstat[0]++;
 				return -1;
 			}
 		
 
-			int lastAllLoginDaycnt = Integer.parseInt(cols.get("last30_login_daycnt"));
-			int lastHalfLoginDaycnt = Integer.parseInt(cols.get("last14_login_daycnt"));
+			int lastAllLoginDaycnt = cols.get("last30_login_daycnt");
+			int lastHalfLoginDaycnt = cols.get("last14_login_daycnt");
 			int nextHalfLoginDaycnt = lastAllLoginDaycnt - lastHalfLoginDaycnt;
 			//int last30LoginDaycnt = Integer.parseInt(cols.get("last30_login_daycnt"));
 
@@ -332,34 +357,28 @@ public class ReadHiveCZSG {
 	}
 
 	// 返回帐号id
-	private static String parseColumnMap(Map<String, String> cols, Vector featureVector, LocalDate ld) {
+	private static Vector parseColumnMap(Map<String, Integer> cols, LocalDate ld) {
 
+		Vector featureVector = new RandomAccessSparseVector(numFeatures);
 		featureVector.setQuick(0, 1.0);// 填充常量 k0
 
 		int i = 1;
 		for (String k : trainIndex) {
-			String s = cols.get(k);
-			if (s.equals("\\N"))// null值替换为0
-				s = "0";
-			featureVector.setQuick(i, Double.parseDouble(s));
+			Integer s = cols.get(k);
+//			if (s.equals("\\N"))// null值替换为0
+//				s = "0";
+			featureVector.setQuick(i, (double)s);
 			i++;
 		}
 
-		String fistLoginDate = cols.get("first_login_date");
-		if (fistLoginDate == null || fistLoginDate.length() != 10) {
-			// out.println("fistLoginDate format error: " + fistLoginDate);
-			rowstat[1]++;
-			return null;
-		}
-		LocalDate firstLoginDate = LocalDate.parse(fistLoginDate);
-		int uptodate = Utils.dateDiff(ld, firstLoginDate);
+		int uptodate = cols.get("up_to_date");
 		if (uptodate < 14) {
 			// out.println("uptodate < 14: " + firstLoginDate);
 			rowstat[2]++;
 			return null;
 		}
 
-		int last14LoginDaycnt = Integer.parseInt(cols.get("last14_login_daycnt"));
+		int last14LoginDaycnt = cols.get("last14_login_daycnt");
 		if (last14LoginDaycnt < 2 || last14LoginDaycnt > 13) {
 			// out.println("last7LoginDaycnt < 1");
 			rowstat[3]++;
@@ -368,9 +387,7 @@ public class ReadHiveCZSG {
 
 		featureVector.setQuick(i, uptodate);
 
-		String accountId = cols.get("account_id");
-
-		return accountId;
+		return featureVector;
 	}
 
 }
