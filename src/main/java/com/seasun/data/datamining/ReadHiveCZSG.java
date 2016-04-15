@@ -148,13 +148,13 @@ public class ReadHiveCZSG {
 					Map<String, Integer> cols = new HashMap<>();
 					String accountId = lineSplit(line, ldFinal, cols);
 
-					if(cols.size() < 50){
-						res[0]++;
+					if(accountId == null){
+						res[1]++;
 						return false;
 					}
 					
-					if(accountId == null){
-						res[1]++;
+					if(cols.size() < 50){
+						res[0]++;
 						return false;
 					}
 
