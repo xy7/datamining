@@ -369,10 +369,10 @@ public class ReadHiveCZSG {
 //					int last14LoginDaycnt = Integer.parseInt(cols.get("last14_login_daycnt"));
 //					int last7LoginDaycnt = Integer.parseInt(cols.get("last7_login_daycnt"));
 //					int next7LoginDaycnt = last14LoginDaycnt - last7LoginDaycnt;
-					int last30LoginDaycnt = Integer.parseInt(cols.get("last14_login_daycnt"));
+					int last30LoginDaycnt = Integer.parseInt(cols.get("last30_login_daycnt"));
 
 					int targetValue = 1;// 将流失用户
-					if (last30LoginDaycnt >= 8) {// 留存用户
+					if (last30LoginDaycnt > 15) {// 留存用户
 						targetValue = 2;
 					} else if (last30LoginDaycnt == 0 ) {// 流失用户
 						targetValue = 0;
