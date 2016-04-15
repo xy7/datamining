@@ -217,9 +217,9 @@ public class ReadHiveCZSG {
 		double s0 = 1 - s1 - s2;
 
 		int predictValue = 0;
-		if (s1 >= s2 && s1 >= s0)
+		if(s1>=Utils.CLASSIFY_VALUE || (s1 >= s2 && s1 >= s0 )){
 			predictValue = 1;
-		if (s2 > s1 && s2 > s0)
+		} else if (s2 > s1 && s2 > s0)
 			predictValue = 2;
 		
 		res[targetValue][predictValue] ++;
