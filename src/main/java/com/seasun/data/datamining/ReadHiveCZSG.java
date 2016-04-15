@@ -136,7 +136,7 @@ public class ReadHiveCZSG {
 			if (lfss == null)
 				return;
 			
-			int[] res = { 0, 0, 0, 0 };// parse error, get accountId error, sucess
+			int[] res = { 0, 0, 0 };
 	
 			Map<String, Map<String, Integer>> accountMaps = new HashMap<>();
 			
