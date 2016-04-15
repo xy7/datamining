@@ -66,6 +66,8 @@ public class ReadHiveCZSG {
 
 	private static int SCORE_FREQ;
 
+	private static Map<LocalDate, Map<String, Map<String, String>>> ldAccountMaps = new HashMap<>();
+	
 	public static void main(String[] args) throws Exception {
 
 		Utils.loadConfigFile("./config.properties.hive");
@@ -74,129 +76,136 @@ public class ReadHiveCZSG {
 		MAY_LOST_REPEAT_CNT = Utils.getOrDefault("may_lost_repeat_cnt", 1);
 		RETAIN_THRESHOLD = Utils.getOrDefault("retain_threshold", 15);
 
-		String serialFileName = Utils.getOrDefault("serial_file_name", "./czsg_serial_data.out");
-
-		File file = new File(serialFileName);
-		if (file.exists()) {
-			out.println("serial file exists read to Map");
-			ObjectInputStream in = new ObjectInputStream(new FileInputStream(file));
-			ldSamples = (Map<LocalDate, List<Sample>>) in.readObject();
-			in.close();
-		}
-
 		LocalDate start = LocalDate.parse(Utils.getOrDefault("train_start", "2015-11-01"));
 		LocalDate end = LocalDate.parse(Utils.getOrDefault("train_end", "2015-11-01"));
-		int trainPass = Utils.getOrDefault("train_pass", 1);
-		for (int i = 0; i < trainPass; i++) {
-			out.printf(Locale.ENGLISH, "--------pass: %2d ---------%n", i);
-			for (LocalDate ld = start; !ld.isAfter(end); ld = ld.plusDays(1)) {
-				train(ld);
-			}
-		}
-
-		Utils.saveModel(lr);
 
 		LocalDate evalStart = LocalDate.parse(Utils.getOrDefault("eval_start", "2015-11-01"));
 		LocalDate evalEnd = LocalDate.parse(Utils.getOrDefault("eval_end", "2015-11-01"));
 
+		//new code 
+		//step1/3, load all of hive data to map, write to local file
+		//   if exits local file, load to map
+		String serialFileName = "./serial_data_" + APPID + ".out";
+		File file = new File(serialFileName);
+		if (!file.exists()) {
+			out.println("serial file not exists, now write to it");
+			loadAllHiveData(start, evalEnd);
+			ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(file));
+			out.writeObject(ldAccountMaps);
+			out.close();
+		} else{
+			out.println("serial file exists read to Map");
+			ObjectInputStream in = new ObjectInputStream(new FileInputStream(file));
+			ldAccountMaps = (Map<LocalDate, Map<String, Map<String, String>>>) in.readObject();
+			in.close();
+		}
+		//step2/3, train data
+		int trainPass = Utils.getOrDefault("train_pass", 1);
+		for (int i = 0; i < trainPass; i++) {
+			out.printf(Locale.ENGLISH, "--------pass: %3d ---------%n", i);
+			for (LocalDate ld = start; !ld.isAfter(end); ld = ld.plusDays(1)) {
+				train(ld);
+			}
+		}
+		Utils.saveModel(lr);
+		
+		//step3/3, eval data
+		out.println("eval sample");
+		for (LocalDate ld = start; !ld.isAfter(end); ld = ld.plusDays(1)) {
+			eval(ld);
+		}
+		out.println("eval new");
 		for (LocalDate ld = evalStart; !ld.isAfter(evalEnd); ld = ld.plusDays(1)) {
 			eval(ld);
 		}
-
-		if (!file.exists()) {
-			out.println("serial file not exists, now write to it");
-			ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(file));
-			out.writeObject(ldSamples);
-			out.close();
-		}
-
 	}
+	
+	//1, load all of hive data to map, write to local file
+	private static void loadAllHiveData(LocalDate ld1, LocalDate ld2){
+		for (LocalDate ld = ld1; !ld.isAfter(ld2); ld = ld.plusDays(1)) {
+			
+			RemoteIterator<LocatedFileStatus> lfss = Utils.listHdfsFiles(ld);
+			if (lfss == null)
+				return;
+			
+			int[] res = { 0, 0, 0, 0 };// parse error, get accountId error, sucess
+	
+			Map<String, Map<String, String>> accountMaps = new HashMap<>();
+			
+			Utils.analysisHdfsFiles(lfss, new LineHandler() {
+				@Override
+				public boolean handle(String line) {
+	
+					Map<String, String> cols = lineSplit(line);
+					
+					if (cols == null ){
+						res[0]++;
+						return false;
+					}
+					
+					if(cols.size() < 60){
+						res[1]++;
+						return false;
+					}
+					
+					String accountId = cols.get("account_id");
+					if(accountId == null){
+						res[2]++;
+						return false;
+					}
 
-	static class Sample implements Serializable {
-		private static final long serialVersionUID = -5983545824659336774L;
-		public int targetValue;
-		public transient Vector input;
+					res[3]++;
+					accountMaps.put(accountId, cols);
 
-		public Sample(int targetValue, Vector input) {
-			this.targetValue = targetValue;
-			this.input = input;
+					return true;
+				}
+			});
+			
+			ldAccountMaps.put(ld, accountMaps);
+
+			out.printf(
+					"columns size too small: %d, appid != %s: %d, get accountId  error: %d, sucess: %d  %n"
+					, res[0], APPID, res[1], res[2], res[3]);
 		}
-
-		private void writeObject(ObjectOutputStream out) throws IOException {
-			out.defaultWriteObject();
-			for (int i = 0; i < numFeatures; i++)
-				out.writeDouble(input.get(i));
-		}
-
-		private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
-			in.defaultReadObject();
-			input = new RandomAccessSparseVector(numFeatures);
-			for (int i = 0; i < numFeatures; i++)
-				input.setQuick(i, in.readDouble());
-		}
-
-		@Override
-		public String toString() {
-			return "Sample [targetValue=" + targetValue + ", input=" + input + "]";
-		}
-
 	}
-
-	private static Map<LocalDate, List<Sample>> ldSamples = new HashMap<>();
 
 	private static void eval(LocalDate ld) {
 		out.println("eval: " + ld.toString());
 		Integer[][] res = { {0, 0, 0}, {0, 0, 0}, {0, 0, 0} };// abcd;
+		
+		Map<String, Map<String, String>> samples = ldAccountMaps.get(ld);
+		for(Map<String, String> sample:samples.values()){
+			Vector input = new RandomAccessSparseVector(numFeatures);
+			String accountId = parseColumnMap(sample, input, ld);
+			if(accountId == null)
+				continue;
+				
+			int targetValue = getTargetValue(ld, accountId);
+			if(targetValue < 0)
+				continue;
+			
+			//classify
+			Vector score = lr.classify(input);
 
-		if (ldSamples.containsKey(ld)) {
-			List<Sample> samples = ldSamples.get(ld);
-			for (Sample sample : samples) {
-				evalSample(sample, res);
-			}
-		} else {
-			List<Sample> samples = new LinkedList<>();
-			ldSamples.put(ld, samples);
+			double s1 = score.get(0);
+			double s2 = score.get(1);
+			double s0 = 1 - s1 - s2;
 
-			getTargetValue(ld);
-
-			RemoteIterator<LocatedFileStatus> lfss = Utils.listHdfsFiles(ld);
-			if (lfss == null)
-				return;
-
-			Map<String, Integer> lostLd = lost.get(ld);
-			Utils.analysisHdfsFiles(lfss, new LineHandler() {
-				@Override
-				public boolean handle(String line) {
-					String accountId;
-					Vector input = new RandomAccessSparseVector(numFeatures);
-					try {
-						accountId = parseLine(line, input, ld);
-						if (accountId == null)
-							return false;
-						int targetValue = lostLd.get(accountId);
-
-						Sample sample = new Sample(targetValue, input);
-						samples.add(sample);
-
-						evalSample(sample, res);
-
-					} catch (Exception e) {
-						// e.printStackTrace();
-						// out.println(e);
-						return false;
-					}
-					return true;
-				}
-			});
-
-		} // else
+			int predictValue = 0;
+			if(s1>=Utils.CLASSIFY_VALUE || (s1 >= s2 && s1 >= s0 )){
+				predictValue = 1;
+			} else if (s2 > s1 && s2 > s0)
+				predictValue = 2;
+			
+			res[targetValue][predictValue] ++;
+		}
 
 		int all = 0;
 		for(int i=0;i<3;i++)
 			for(int j=0;j<3;j++)
 				all += res[i][j];
 		
-		out.println("result matrix:");
+		out.printf("result matrix all: %d %n", all);
 		for(int i=0;i<3;i++){
 			for(int j=0;j<3;j++){
 				out.printf("%2.4f \t", (double) res[i][j] / all);
@@ -206,110 +215,49 @@ public class ReadHiveCZSG {
 		
 	}
 
-	private static void evalSample(Sample sample, Integer[][] res) {
-		Vector input = sample.input;
-		int targetValue = sample.targetValue;
-
-		Vector score = lr.classify(input);
-
-		double s1 = score.get(0);
-		double s2 = score.get(1);
-		double s0 = 1 - s1 - s2;
-
-		int predictValue = 0;
-		if(s1>=Utils.CLASSIFY_VALUE || (s1 >= s2 && s1 >= s0 )){
-			predictValue = 1;
-		} else if (s2 > s1 && s2 > s0)
-			predictValue = 2;
-		
-		res[targetValue][predictValue] ++;
-
-	}
-
+	private static int MAY_LOST_REPEAT_CNT;
 	private static void train(LocalDate ld) {
 		out.println("train: " + ld.toString());
-		sampleCnt = 0;
-		if (ldSamples.containsKey(ld)) {
-			List<Sample> samples = ldSamples.get(ld);
-			for (Sample sample : samples)
-				trainSample(sample);
-
-			eval(ld);
-			return;
-		}
-
-		List<Sample> samples = new LinkedList<>();
-		ldSamples.put(ld, samples);
-
-		getTargetValue(ld);
-		RemoteIterator<LocatedFileStatus> lfss = Utils.listHdfsFiles(ld);
-		if (lfss == null)
-			return;
-
-		Map<String, Integer> lostLd = lost.get(ld);
-		int[] res = new int[3];// parse error, get target error, sucess
+		int sampleCnt = 0;
 		rowstat = new int[] { 0, 0, 0, 0, 0 };
-		Utils.analysisHdfsFiles(lfss, new LineHandler() {
-			@Override
-			public boolean handle(String line) {
-				Vector input = new RandomAccessSparseVector(numFeatures);
-				String accountId = parseLine(line, input, ld);
-				if (accountId == null) {
-					res[0]++;
-					return false;
-				}
-
-				int targetValue = lostLd.getOrDefault(accountId, -1);
-				if (targetValue == -1) {
-					res[1]++;
-					return false;
-				}
-
-				Sample sample = new Sample(targetValue, input);
-				samples.add(sample);
-
-				trainSample(sample);
-
-				res[2]++;
-
-				return true;
+		Map<String, Map<String, String>> samples = ldAccountMaps.get(ld);
+		for(Map<String, String> sample:samples.values()){
+			Vector input = new RandomAccessSparseVector(numFeatures);
+			String accountId = parseColumnMap(sample, input, ld);
+			if(accountId == null)
+				continue;
+				
+			int targetValue = getTargetValue(ld, accountId);
+			if(targetValue < 0)
+				continue;
+			
+			//print score
+			if (SCORE_FREQ != 0 && (++sampleCnt) % SCORE_FREQ == 0) {
+				// check performance while this is still news
+				double logP = lr.logLikelihood(targetValue, input);
+				Vector vec = lr.classify(input);
+				double p;
+				if (targetValue >= 1)
+					p = vec.get(targetValue - 1);
+				else
+					p = 1 - vec.get(0) - vec.get(1);
+				out.printf(Locale.ENGLISH, "sampleCnt: %d  %2d  %1.4f  |  %2.6f %10.4f%n",
+						sampleCnt, targetValue, p, lr.currentLearningRate(), logP);
 			}
-		});
 
-		out.printf(
-				"columns size too small or appid not %s: %d, first_login_date error: %d, uptodate < 14: %d, last14LoginDaycnt not in[2,13]: %d  %n"
-				, APPID, rowstat[0], rowstat[1], rowstat[2], rowstat[3]);
-		out.printf("parse error: %d, get target error: %d, sucess: %d %n", res[0], res[1], res[2]);
-
-		eval(ld);
-	}
-
-	private static int sampleCnt = 0;
-	private static int MAY_LOST_REPEAT_CNT;
-
-	private static void trainSample(Sample sample) {
-		int targetValue = sample.targetValue;
-		Vector input = sample.input;
-		if (SCORE_FREQ != 0 && (++sampleCnt) % SCORE_FREQ == 0) {
-			// check performance while this is still news
-			double logP = lr.logLikelihood(targetValue, input);
-			Vector vec = lr.classify(input);
-			double p;
-			if (targetValue >= 1)
-				p = vec.get(targetValue - 1);
-			else
-				p = 1 - vec.get(0) - vec.get(1);
-			out.printf(Locale.ENGLISH, "sampleCnt: %d  %2d  %1.4f  |  %2.6f %10.4f%n",
-					sampleCnt, targetValue, p, lr.currentLearningRate(), logP);
-		}
-
-		// now update model
-		// 将流失用户训练3次增加样本
-		if (targetValue == 1) {
-			for (int i = 0; i < MAY_LOST_REPEAT_CNT; i++)
+			// now update model
+			// 将流失用户训练3次增加样本
+			if (targetValue == 1) {
+				for (int i = 0; i < MAY_LOST_REPEAT_CNT; i++)
+					lr.train(targetValue, input);
+			} else
 				lr.train(targetValue, input);
-		} else
-			lr.train(targetValue, input);
+		}
+		
+		out.printf(
+				"train finish date:%s, first_login_date error: %d, uptodate < 14: %d, last14LoginDaycnt not in[2,13]: %d, getTargetValue error:%d   %n"
+				,ld.toString(), rowstat[1], rowstat[2], rowstat[3], rowstat[0]);
+
 	}
 
 	private static Map<String, String> lineSplit(String line) {
@@ -349,67 +297,44 @@ public class ReadHiveCZSG {
 		return res;
 	}
 
-	private static void getTargetValue(LocalDate ld) {
-		out.println("getTargetValue: " + ld.toString());
-		if (lost.containsKey(ld))
-			return;
-		RemoteIterator<LocatedFileStatus> lfss = Utils.listHdfsFiles(ld.plusDays(30));
-		if (lfss == null)
-			return;
+	private static int[] rowstat;
+	
+	private static int getTargetValue(LocalDate ld, String accountId) {
+		
+		try {
+			Map<String, String> cols = ldAccountMaps.get(ld.plusDays(30)).get(accountId);
+			if (cols == null){
+				rowstat[0]++;
+				return -1;
+			}
+		
 
-		Map<String, Integer> lostLd = new HashMap<>();
-		Utils.analysisHdfsFiles(lfss, new LineHandler() {
-			@Override
-			public boolean handle(String line) {
-				try {
-					Map<String, String> cols = lineSplit(line);
-					if (cols == null)
-						return true;
-					// out.println("line column size: " + cols.size() +
-					// "  values: " + cols);
-					String accountId = cols.get("account_id");
+			int lastAllLoginDaycnt = Integer.parseInt(cols.get("last30_login_daycnt"));
+			int lastHalfLoginDaycnt = Integer.parseInt(cols.get("last14_login_daycnt"));
+			int nextHalfLoginDaycnt = lastAllLoginDaycnt - lastHalfLoginDaycnt;
+			//int last30LoginDaycnt = Integer.parseInt(cols.get("last30_login_daycnt"));
 
-					int lastAllLoginDaycnt = Integer.parseInt(cols.get("last30_login_daycnt"));
-					int lastHalfLoginDaycnt = Integer.parseInt(cols.get("last14_login_daycnt"));
-					int nextHalfLoginDaycnt = lastAllLoginDaycnt - lastHalfLoginDaycnt;
-					//int last30LoginDaycnt = Integer.parseInt(cols.get("last30_login_daycnt"));
-
-					int targetValue = 1;// 将流失用户
-					if (nextHalfLoginDaycnt > 0 && lastHalfLoginDaycnt > 0) {// 留存用户
-						targetValue = 2;
-					} else if (nextHalfLoginDaycnt == 0 ) {// 流失用户
-						targetValue = 0;
-					}
-
-					lostLd.put(accountId, targetValue);
-					return true;
-				} catch (NullPointerException e) {
-					// e.printStackTrace();
-					// out.println(e);
-					return false;
-				}
+			int targetValue = 1;// 将流失用户
+			if (nextHalfLoginDaycnt > 0 && lastHalfLoginDaycnt > 0) {// 留存用户
+				targetValue = 2;
+			} else if (nextHalfLoginDaycnt == 0 ) {// 流失用户
+				targetValue = 0;
 			}
 
-		});
-
-		lost.put(ld, lostLd);
+			return targetValue;
+		} catch (Exception e) {
+			// e.printStackTrace();
+			//out.println(e);
+			rowstat[0]++;
+			return -2;
+		}
+	
 	}
 
 	// 返回帐号id
-	private static int[] rowstat;
-
-	private static String parseLine(String line, Vector featureVector, LocalDate ld) {
+	private static String parseColumnMap(Map<String, String> cols, Vector featureVector, LocalDate ld) {
 
 		featureVector.setQuick(0, 1.0);// 填充常量 k0
-
-		Map<String, String> cols = lineSplit(line);
-
-		if (cols == null || cols.size() < 60) {
-			// out.println("parse error, columns size to small: " +
-			// cols.size());
-			rowstat[0]++;
-			return null;
-		}
 
 		int i = 1;
 		for (String k : trainIndex) {
