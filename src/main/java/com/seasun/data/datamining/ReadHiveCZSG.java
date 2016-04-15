@@ -169,7 +169,7 @@ public class ReadHiveCZSG {
 
 			out.printf(
 					"columns size too small: %d, appid != %s or first_login_date error: %d, sucess: %d  %n"
-					, res[0], APPID, res[1], res[2], res[3]);
+					, res[0], APPID, res[1], res[2]);
 		}
 	}
 
