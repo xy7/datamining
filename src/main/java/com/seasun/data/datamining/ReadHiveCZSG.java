@@ -350,7 +350,7 @@ public class ReadHiveCZSG {
 		out.println("getTargetValue: " + ld.toString());
 		if (lost.containsKey(ld))
 			return;
-		RemoteIterator<LocatedFileStatus> lfss = Utils.listHdfsFiles(ld.plusDays(14));
+		RemoteIterator<LocatedFileStatus> lfss = Utils.listHdfsFiles(ld.plusDays(30));
 		if (lfss == null)
 			return;
 
