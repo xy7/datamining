@@ -409,7 +409,7 @@ public class ReadHiveCZSG {
 		}
 
 		int last14LoginDaycnt = cols.get("last14_login_daycnt");
-		if (last14LoginDaycnt < 2 || last14LoginDaycnt > 13) {
+		if (last14LoginDaycnt < 4 || last14LoginDaycnt > 9) { //2 -- 23
 			// out.println("last7LoginDaycnt < 1");
 			rowstat[3]++;
 			return null;
