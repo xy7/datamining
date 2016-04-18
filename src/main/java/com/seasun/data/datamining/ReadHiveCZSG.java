@@ -38,8 +38,8 @@ public class ReadHiveCZSG {
 
 	private static List<String> trainIndex = null;
 	static {
-		trainIndex = Arrays.asList(new String[] { 
-				"last1_login_cnt"
+		trainIndex = Arrays.asList(new String[] { "role_level"
+				,"last1_login_cnt"
 				,"last2_login_cnt"
 				,"last3_login_cnt"
 				,"last4_login_cnt"
@@ -401,7 +401,7 @@ public class ReadHiveCZSG {
 		}
 
 		int last14LoginDaycnt = cols.get("last14_login_daycnt");
-		if (last14LoginDaycnt < 4 || last14LoginDaycnt > 9) { //2 -- 23
+		if (last14LoginDaycnt < 2 || last14LoginDaycnt > 10) { //2 -- 13
 			// out.println("last7LoginDaycnt < 1");
 			rowstat[3]++;
 			return null;
