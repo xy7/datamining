@@ -39,22 +39,50 @@ public class ReadHiveCZSG {
 	private static List<String> trainIndex = null;
 	static {
 		trainIndex = Arrays.asList(new String[] { "role_level"
-				, "last1_login_cnt"
-				, "last2_login_cnt"
-				, "last3_login_cnt"
-				, "last4_login_cnt"
-				, "last5_login_cnt"
-				, "last6_login_cnt"
-				, "last7_login_cnt"
-				, "last14_login_cnt"
-				, "last1_login_daycnt"
-				, "last2_login_daycnt"
-				, "last3_login_daycnt"
-				, "last4_login_daycnt"
-				, "last5_login_daycnt"
-				, "last6_login_daycnt"
-				, "last7_login_daycnt"
-				, "last14_login_daycnt" });
+				,"first_login_cnt"
+				,"first_online_dur"
+				,"total_recharge"
+				,"total_recharge_cnt"
+				,"last1_login_cnt"
+				,"last2_login_cnt"
+				,"last3_login_cnt"
+				,"last4_login_cnt"
+				,"last5_login_cnt"
+				,"last6_login_cnt"
+				,"last7_login_cnt"
+				,"last14_login_cnt"
+				,"last1_login_daycnt"
+				,"last2_login_daycnt"
+				,"last3_login_daycnt"
+				,"last4_login_daycnt"
+				,"last5_login_daycnt"
+				,"last6_login_daycnt"
+				,"last7_login_daycnt"
+				,"last14_login_daycnt"
+				,"last1_online_dur"
+				,"last2_online_dur"
+				,"last3_online_dur"
+				,"last4_online_dur"
+				,"last5_online_dur"
+				,"last6_online_dur"
+				,"last7_online_dur"
+				,"last14_online_dur"
+				,"last1_recharge"
+				,"last2_recharge"
+				,"last3_recharge"
+				,"last4_recharge"
+				,"last5_recharge"
+				,"last6_recharge"
+				,"last7_recharge"
+				,"last14_recharge"
+				,"last1_recharge_cnt"
+				,"last2_recharge_cnt"
+				,"last3_recharge_cnt"
+				,"last4_recharge_cnt"
+				,"last5_recharge_cnt"
+				,"last6_recharge_cnt"
+				,"last7_recharge_cnt"
+				,"last14_recharge_cnt" });
 
 		numFeatures = trainIndex.size() + 2;
 
@@ -84,7 +112,6 @@ public class ReadHiveCZSG {
 		// new code
 		// step1/3, load all of hive data to map, write to local file
 		// if exits local file, load to map
-		out.println("serial file not exists, now write to it");
 		loadAllHiveData(start, end);
 		loadAllHiveData(start.plusDays(TARGET_AFTTER_DAYS), end.plusDays(TARGET_AFTTER_DAYS));
 		loadAllHiveData(evalStart, evalEnd);
