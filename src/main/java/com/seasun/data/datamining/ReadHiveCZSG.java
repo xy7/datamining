@@ -2,6 +2,7 @@ package com.seasun.data.datamining;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -83,23 +84,12 @@ public class ReadHiveCZSG {
 		// new code
 		// step1/3, load all of hive data to map, write to local file
 		// if exits local file, load to map
-		String serialFileName = "./serial_data_" + APPID + ".out";
-		File file = new File(serialFileName);
-		if (!file.exists()) {
-			out.println("serial file not exists, now write to it");
-			loadAllHiveData(start, end);
-			loadAllHiveData(start.plusDays(TARGET_AFTTER_DAYS), end.plusDays(TARGET_AFTTER_DAYS));
-			loadAllHiveData(evalStart, evalEnd);
-			loadAllHiveData(evalStart.plusDays(TARGET_AFTTER_DAYS), evalEnd.plusDays(TARGET_AFTTER_DAYS));
-			ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(file));
-			out.writeObject(ldAccountMaps);
-			out.close();
-		} else {
-			out.println("serial file exists read to Map");
-			ObjectInputStream in = new ObjectInputStream(new FileInputStream(file));
-			ldAccountMaps = (Map<LocalDate, Map<String, Map<String, Integer>>>) in.readObject();
-			in.close();
-		}
+		out.println("serial file not exists, now write to it");
+		loadAllHiveData(start, end);
+		loadAllHiveData(start.plusDays(TARGET_AFTTER_DAYS), end.plusDays(TARGET_AFTTER_DAYS));
+		loadAllHiveData(evalStart, evalEnd);
+		loadAllHiveData(evalStart.plusDays(TARGET_AFTTER_DAYS), evalEnd.plusDays(TARGET_AFTTER_DAYS));
+		
 		// step2/3, train data
 		int trainPass = Utils.getOrDefault("train_pass", 1);
 		for (int i = 0; i < trainPass; i++) {
@@ -115,19 +105,21 @@ public class ReadHiveCZSG {
 		for (LocalDate ld = start; !ld.isAfter(end); ld = ld.plusDays(1)) {
 			eval(ld);
 		}
-		out.println("eval new");
+		out.println("eval predict");
 		for (LocalDate ld = evalStart; !ld.isAfter(evalEnd); ld = ld.plusDays(1)) {
 			eval(ld);
 		}
 	}
-
-	// 1, load all of hive data to map, write to local file
-	private static void loadAllHiveData(LocalDate ld1, LocalDate ld2) {
-		for (LocalDate ld = ld1; !ld.isAfter(ld2); ld = ld.plusDays(1)) {
-			out.println("load hive data: " + ld.toString());
-			if (ldAccountMaps.containsKey(ld))
-				continue;
-
+	
+	private static void loadHiveData(LocalDate ld) throws FileNotFoundException, IOException, ClassNotFoundException{
+		if (ldAccountMaps.containsKey(ld)){
+			out.println("ldAccountMaps already exits: " + ld.toString());
+			return;
+		}
+		
+		String serialFileName = "./data/serial_data_" + APPID + "_" + ld.toString() + ".out";
+		File file = new File(serialFileName);
+		if (!file.exists()) {
 			RemoteIterator<LocatedFileStatus> lfss = Utils.listHdfsFiles(ld);
 			if (lfss == null)
 				return;
@@ -166,6 +158,35 @@ public class ReadHiveCZSG {
 			out.printf(
 					"columns size too small: %d, appid != %s or first_login_date error: %d, sucess: %d  %n"
 					, res[0], APPID, res[1], res[2]);
+			
+			ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(file));
+			out.writeObject(accountMaps);
+			out.close();
+		} else {
+			out.println("serial file exists read to Map");
+			ObjectInputStream in = new ObjectInputStream(new FileInputStream(file));
+			Map<String, Map<String, Integer>> accountMap = (Map<String, Map<String, Integer>>)in.readObject();
+			ldAccountMaps.put(ld, accountMap);
+			in.close();
+		}
+	}
+
+	// 1, load all of hive data to map, write to local file
+	private static void loadAllHiveData(LocalDate ld1, LocalDate ld2) {
+		for (LocalDate ld = ld1; !ld.isAfter(ld2); ld = ld.plusDays(1)) {
+			out.println("load hive data: " + ld.toString());
+			try {
+				loadHiveData(ld);
+			} catch (FileNotFoundException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (ClassNotFoundException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 	}
 
