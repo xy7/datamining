@@ -63,14 +63,7 @@ public class ReadHiveCZSG {
 				,"last6_online_dur"
 				,"last7_online_dur"
 				,"last14_online_dur"
-				,"last1_recharge_cnt"
-				,"last2_recharge_cnt"
-				,"last3_recharge_cnt"
-				,"last4_recharge_cnt"
-				,"last5_recharge_cnt"
-				,"last6_recharge_cnt"
-				,"last7_recharge_cnt"
-				,"last14_recharge_cnt" });
+				 });
 
 		numFeatures = trainIndex.size() + 2;
 
