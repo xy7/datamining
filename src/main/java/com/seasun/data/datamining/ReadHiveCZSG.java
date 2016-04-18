@@ -38,8 +38,8 @@ public class ReadHiveCZSG {
 
 	private static List<String> trainIndex = null;
 	static {
-		trainIndex = Arrays.asList(new String[] { "role_level"
-				,"last1_login_cnt"
+		trainIndex = Arrays.asList(new String[] { 
+				"last1_login_cnt"
 				,"last2_login_cnt"
 				,"last3_login_cnt"
 				,"last4_login_cnt"
@@ -55,14 +55,6 @@ public class ReadHiveCZSG {
 				,"last6_login_daycnt"
 				,"last7_login_daycnt"
 				,"last14_login_daycnt"
-				,"last1_online_dur"
-				,"last2_online_dur"
-				,"last3_online_dur"
-				,"last4_online_dur"
-				,"last5_online_dur"
-				,"last6_online_dur"
-				,"last7_online_dur"
-				,"last14_online_dur"
 				 });
 
 		numFeatures = trainIndex.size() + 2;
