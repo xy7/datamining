@@ -29,7 +29,7 @@ import org.apache.mahout.math.Vector;
  * 根据空间自相似来预测
  */
 public class ReadHiveSelfSimilar {
-	private static int TARGET_AFTTER_DAYS = 30;
+	private static int TARGET_AFTTER_DAYS = 14;
 
 	private static String APPID = "100001";
 
@@ -44,7 +44,7 @@ public class ReadHiveSelfSimilar {
 		Utils.loadConfigFile("./config.properties.hive");
 		APPID = Utils.getOrDefault("appid", APPID);
 
-		TARGET_AFTTER_DAYS = Utils.getOrDefault("target_after_days", 30);
+		TARGET_AFTTER_DAYS = Utils.getOrDefault("target_after_days", 14);
 		numFeatures = Utils.getOrDefault("num_features", 14);
 
 		LocalDate start = LocalDate.parse(Utils.getOrDefault("train_start", "2015-11-01"));
@@ -323,22 +323,33 @@ public class ReadHiveSelfSimilar {
 
 	private static Map<String, Integer> getTargetValue(LocalDate ld, Map<String, Vector> samples) {
 		
+		Map<String, Vector> target = mapTransfer(ld.plusDays(TARGET_AFTTER_DAYS));
+		
 		Map<String, Integer> res = new HashMap<>(samples.size());
 		
 		int[] rowstat = {0, 0};
 		Map<String, Map<String, Integer>> accountMaps = ldAccountMaps.get(ld.plusDays(TARGET_AFTTER_DAYS));
 		for(String accountId:samples.keySet()){
-			Map<String, Integer> cols = accountMaps.get(accountId);
-			if (cols == null) {
-				rowstat[0]++;
-				samples.remove(accountId);
-				continue;
-			}
+			Map<String, Integer> cols = accountMaps.getOrDefault(accountId, new HashMap<>(0));
 			
 			try{
-				int lastAllLoginDaycnt = cols.get("last14_login_daycnt");
-				int lastHalfLoginDaycnt = cols.get("last7_login_daycnt");
-				int nextHalfLoginDaycnt = lastAllLoginDaycnt - lastHalfLoginDaycnt;
+				Vector v = target.get(accountId);
+	
+				int nextHalfLoginDaycnt = 0;
+				for(int i=0;i<7;i++){
+					if(v.get(i) >= 1.0){
+						nextHalfLoginDaycnt = 1;
+						break;
+					}	
+				}
+				
+				int lastHalfLoginDaycnt = 0;
+				for(int i=7;i<14;i++){
+					if(v.get(i) >= 1.0){
+						lastHalfLoginDaycnt = 1;
+						break;
+					}	
+				}
 				
 				int targetValue = 1;// 将流失用户
 				if (nextHalfLoginDaycnt > 0 && lastHalfLoginDaycnt > 0) {// 留存用户
