@@ -55,15 +55,17 @@ public class ReadHiveSelfSimilar {
 		// step1/3, load all of hive data to map, write to local file
 		// if exits local file, load to map
 		loadAllHiveData(start, start.plusDays(numFeatures));
-		loadHiveData(start.plusDays(TARGET_AFTTER_DAYS));
+		loadAllHiveData(start.plusDays(TARGET_AFTTER_DAYS), start.plusDays(TARGET_AFTTER_DAYS + numFeatures - 1));
 
 		loadAllHiveData(evalStart, evalStart.plusDays(numFeatures));
-		loadHiveData(evalStart.plusDays(TARGET_AFTTER_DAYS));
+		loadAllHiveData(evalStart.plusDays(TARGET_AFTTER_DAYS), evalStart.plusDays(TARGET_AFTTER_DAYS + numFeatures - 1));
 
 		// step2/3, train data
 		Map<String, Vector> samples = mapTransfer(start);
 		out.println("train");
 		Map<Integer, List<Vector>> samplesClass = train(start, samples);
+		out.println("eval train samples");
+		eval(evalStart, samples, samplesClass);
 
 		// step3/3, eval data
 		out.println("eval");
