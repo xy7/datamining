@@ -289,6 +289,23 @@ public class Utils {
 		return lfss;
 	}
 	
+	public static RemoteIterator<LocatedFileStatus> listHdfsFiles(LocalDate ld, String tableName) {
+		String dayStr = ld.format(formatter);
+		String midTable = "/hive/warehouse/fig.db/" + tableName + "/dt=";
+		RemoteIterator<LocatedFileStatus> lfss;
+		try {
+			lfss = hdfs.listFiles(
+					new Path(midTable + dayStr + "/user_type=account" )
+					, true);
+		} catch (IllegalArgumentException | IOException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+			out.println("hdfs.listFIles failed! dayStr: " + dayStr);
+			return null;
+		}
+		return lfss;
+	}
+	
 	public static void analysisHdfsFiles(RemoteIterator<LocatedFileStatus> lfss, LineHandler handler){
 
 		int all = 0;

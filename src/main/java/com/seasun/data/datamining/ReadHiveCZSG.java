@@ -25,7 +25,9 @@ import org.apache.mahout.classifier.sgd.L1;
 import org.apache.mahout.classifier.sgd.OnlineLogisticRegression;
 import org.apache.mahout.math.RandomAccessSparseVector;
 import org.apache.mahout.math.Vector;
-
+/*
+ * 多分类
+ */
 public class ReadHiveCZSG {
 	private static final int TARGET_AFTTER_DAYS = 30;
 
