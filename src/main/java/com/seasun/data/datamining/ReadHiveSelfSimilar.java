@@ -34,6 +34,7 @@ public class ReadHiveSelfSimilar {
 	private static PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out, Charsets.UTF_8), true);
 
 	private static int numFeatures;
+	private static int SCORE_FREQ;
 
 	private static Map<LocalDate, Map<String, Map<String, Integer>>> ldAccountMaps = new HashMap<>();
 
@@ -41,6 +42,7 @@ public class ReadHiveSelfSimilar {
 
 		Utils.loadConfigFile("./config.properties.hive");
 		APPID = Utils.getOrDefault("appid", APPID);
+		SCORE_FREQ = Utils.getOrDefault("score_freq", 0);
 
 		TARGET_AFTTER_DAYS = Utils.getOrDefault("target_after_days", 14);
 		numFeatures = Utils.getOrDefault("num_features", 14);
@@ -187,6 +189,7 @@ public class ReadHiveSelfSimilar {
 		out.println("eval start: ");
 		Map<String, Integer> accountTargetValue = getTargetValue(evalStart, inputs);
 
+		int sampleCnt = 0;
 		Integer[][] res = { { 0, 0, 0 }, { 0, 0, 0 }, { 0, 0, 0 } };// abcd;
 
 		for (Map.Entry<String, Vector> eval : inputs.entrySet()) {
@@ -215,10 +218,12 @@ public class ReadHiveSelfSimilar {
 			int targetValue = accountTargetValue.getOrDefault(accountId, 0);
 			res[targetValue][predictValue]++;
 			
-			out.printf("account:%s, input:%s, target:%d, predict:%d, similar:%f\t%f\t%f, avg similar:%f\t%f\t%f %n"
-					, accountId, input.toString(), targetValue, predictValue
-					, similar[0], similar[1], similar[2]
-					, sr[0], sr[1], sr[2]);
+			if (SCORE_FREQ != 0 && (++sampleCnt) % SCORE_FREQ == 0) {
+				out.printf("account:%s, input:%s, target:%d, predict:%d, similar:%f\t%f\t%f, avg similar:%f\t%f\t%f %n"
+						, accountId, input.toString(), targetValue, predictValue
+						, similar[0], similar[1], similar[2]
+						, sr[0], sr[1], sr[2]);
+			}
 		}
 
 		int all = 0;
