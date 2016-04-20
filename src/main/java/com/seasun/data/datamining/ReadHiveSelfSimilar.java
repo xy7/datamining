@@ -241,7 +241,7 @@ public class ReadHiveSelfSimilar {
 			if (input == null)
 				continue;
 
-			int targetValue = accountTargetValue.get(accountId);
+			int targetValue = accountTargetValue.getOrDefault(accountId, 0);
 			if (targetValue < 0 || targetValue > 2)
 				continue;
 
