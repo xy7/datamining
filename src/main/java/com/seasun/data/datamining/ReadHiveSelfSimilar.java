@@ -54,7 +54,8 @@ public class ReadHiveSelfSimilar {
 		loadAllHiveData(start.plusDays(TARGET_AFTTER_DAYS), start.plusDays(TARGET_AFTTER_DAYS + numFeatures - 1));
 
 		loadAllHiveData(evalStart, evalStart.plusDays(numFeatures));
-		loadAllHiveData(evalStart.plusDays(TARGET_AFTTER_DAYS), evalStart.plusDays(TARGET_AFTTER_DAYS + numFeatures - 1));
+		loadAllHiveData(evalStart.plusDays(TARGET_AFTTER_DAYS),
+				evalStart.plusDays(TARGET_AFTTER_DAYS + numFeatures - 1));
 
 		// step2/3, train data
 		Map<String, Vector> samples = mapTransfer(start);
@@ -170,15 +171,16 @@ public class ReadHiveSelfSimilar {
 			}
 		}
 	}
-	
-	private static double vectorSimilar(Vector eval, Vector sample){
-		return eval.minus(sample).norm(2)/sample.norm(2);
+
+	private static double vectorSimilar(Vector eval, Vector sample) {
+		return eval.minus(sample).norm(2) / sample.norm(2);
 	}
 
-	private static void eval(LocalDate evalStart, Map<String, Vector> evalSamples, Map<Integer, List<Vector>> samplesClass) {
+	private static void eval(LocalDate evalStart, Map<String, Vector> evalSamples,
+			Map<Integer, List<Vector>> samplesClass) {
 		out.println("eval start: ");
 		Map<String, Integer> accountTargetValue = getTargetValue(evalStart, evalSamples);
-		
+
 		Integer[][] res = { { 0, 0, 0 }, { 0, 0, 0 }, { 0, 0, 0 } };// abcd;
 
 		for (Map.Entry<String, Vector> eval : evalSamples.entrySet()) {
@@ -186,25 +188,25 @@ public class ReadHiveSelfSimilar {
 			Vector input = eval.getValue();
 			if (input == null)
 				continue;
-			
-			double[] similar = {0.0, 0.0, 0.0};//绝对相似度
-			int[] sum = {0, 0, 0};
-			for(int i=0;i<=2;i++){
-				for(Vector v:samplesClass.get(i)){
-					sum[i] ++;
+
+			double[] similar = { 0.0, 0.0, 0.0 };// 绝对相似度
+			int[] sum = { 0, 0, 0 };
+			for (int i = 0; i <= 2; i++) {
+				for (Vector v : samplesClass.get(i)) {
+					sum[i]++;
 					similar[i] += vectorSimilar(input, v);
 				}
 			}
-			
-			double[] sr = {0.0, 0.0, 0.0};//平均相似度
-			for(int i=0;i<=2;i++)
-				sr[i] = similar[i]/sum[i];
-			
-			int targetValue = accountTargetValue.get(accountId);
+
+			double[] sr = { 0.0, 0.0, 0.0 };// 平均相似度
+			for (int i = 0; i <= 2; i++)
+				sr[i] = similar[i] / sum[i];
+
+			int targetValue = accountTargetValue.getOrDefault(accountId, 0);
 			int predictValue = 1;
-			if(sr[0]>sr[1] && sr[0]>sr[2])
+			if (sr[0] > sr[1] && sr[0] > sr[2])
 				predictValue = 0;
-			else if(sr[2]>sr[0] && sr[2]>sr[1])
+			else if (sr[2] > sr[0] && sr[2] > sr[1])
 				predictValue = 2;
 
 			res[targetValue][predictValue]++;
@@ -228,7 +230,7 @@ public class ReadHiveSelfSimilar {
 	private static Map<Integer, List<Vector>> train(LocalDate ld, Map<String, Vector> samples) {
 		out.println("train: " + ld.toString());
 		Map<Integer, List<Vector>> sampleClass = new HashMap<>();
-		for(int i=0;i<3;i++)
+		for (int i = 0; i < 3; i++)
 			sampleClass.put(i, new LinkedList<>());
 
 		int[] sampleStat = { 0, 0, 0 };
@@ -250,7 +252,8 @@ public class ReadHiveSelfSimilar {
 
 		}
 
-		out.printf("train finish, lost cnt:%d, may cnt:%d, retain cnt: %d %n", sampleStat[0], sampleStat[1], sampleStat[2]);
+		out.printf("train finish, lost cnt:%d, may cnt:%d, retain cnt: %d %n", sampleStat[0], sampleStat[1],
+				sampleStat[2]);
 
 		return sampleClass;
 
@@ -320,50 +323,51 @@ public class ReadHiveSelfSimilar {
 		return res;
 	}
 
-
 	private static Map<String, Integer> getTargetValue(LocalDate ld, Map<String, Vector> samples) {
-		
+
 		Map<String, Vector> target = mapTransfer(ld.plusDays(TARGET_AFTTER_DAYS));
-		
+
 		Map<String, Integer> res = new HashMap<>(samples.size());
-		
-		int[] rowstat = {0, 0};
-		Map<String, Map<String, Integer>> accountMaps = ldAccountMaps.get(ld.plusDays(TARGET_AFTTER_DAYS));
-		for(String accountId:samples.keySet()){
-			Map<String, Integer> cols = accountMaps.getOrDefault(accountId, new HashMap<>(0));
-			
-			try{
-				Vector v = target.get(accountId);
-	
-				int nextHalfLoginDaycnt = 0;
-				for(int i=0;i<7;i++){
-					if(v.get(i) >= 1.0){
-						nextHalfLoginDaycnt = 1;
-						break;
-					}	
+
+		int[] rowstat = { 0, 0 };
+		for (String accountId : samples.keySet()) {
+			if (!target.containsKey(accountId)) {
+				res.put(accountId, 0);
+			} else {
+				try {
+					Vector v = target.get(accountId);
+
+					int nextHalfLoginDaycnt = 0;
+					for (int i = 0; i < 7; i++) {
+						if (v.get(i) >= 1.0) {
+							nextHalfLoginDaycnt = 1;
+							break;
+						}
+					}
+
+					int lastHalfLoginDaycnt = 0;
+					for (int i = 7; i < 14; i++) {
+						if (v.get(i) >= 1.0) {
+							lastHalfLoginDaycnt = 1;
+							break;
+						}
+					}
+
+					int targetValue = 1;// 将流失用户
+					if (nextHalfLoginDaycnt > 0 && lastHalfLoginDaycnt > 0) {// 留存用户
+						targetValue = 2;
+					} else if (nextHalfLoginDaycnt == 0) {// 流失用户
+						targetValue = 0;
+					}
+
+					res.put(accountId, targetValue);
+				} catch (Exception e) {
+					rowstat[1]++;
 				}
-				
-				int lastHalfLoginDaycnt = 0;
-				for(int i=7;i<14;i++){
-					if(v.get(i) >= 1.0){
-						lastHalfLoginDaycnt = 1;
-						break;
-					}	
-				}
-				
-				int targetValue = 1;// 将流失用户
-				if (nextHalfLoginDaycnt > 0 && lastHalfLoginDaycnt > 0) {// 留存用户
-					targetValue = 2;
-				} else if (nextHalfLoginDaycnt == 0) {// 流失用户
-					targetValue = 0;
-				}
-				
-				res.put(accountId,  targetValue);
-			} catch (Exception e){
-				rowstat[1] ++;
 			}
+
 		}
-		
+
 		out.printf("get target null cnt: %d, get field exception cnt: %d %n", rowstat[0], rowstat[1]);
 		return res;
 	}
