@@ -182,40 +182,43 @@ public class ReadHiveSelfSimilar {
 		return eval.minus(sample).norm(2) / sample.norm(2);
 	}
 
-	private static void eval(LocalDate evalStart, Map<String, Vector> evalSamples,
+	private static void eval(LocalDate evalStart, Map<String, Vector> inputs,
 			Map<Integer, List<Vector>> samplesClass) {
 		out.println("eval start: ");
-		Map<String, Integer> accountTargetValue = getTargetValue(evalStart, evalSamples);
+		Map<String, Integer> accountTargetValue = getTargetValue(evalStart, inputs);
 
 		Integer[][] res = { { 0, 0, 0 }, { 0, 0, 0 }, { 0, 0, 0 } };// abcd;
 
-		for (Map.Entry<String, Vector> eval : evalSamples.entrySet()) {
+		for (Map.Entry<String, Vector> eval : inputs.entrySet()) {
 			String accountId = eval.getKey();
 			Vector input = eval.getValue();
 			if (input == null)
 				continue;
 
 			double[] similar = { 0.0, 0.0, 0.0 };// 绝对相似度
-			int[] sum = { 0, 0, 0 };
 			for (int i = 0; i <= 2; i++) {
 				for (Vector v : samplesClass.get(i)) {
-					sum[i]++;
 					similar[i] += vectorSimilar(input, v);
 				}
 			}
 
 			double[] sr = { 0.0, 0.0, 0.0 };// 平均相似度
 			for (int i = 0; i <= 2; i++)
-				sr[i] = similar[i] / sum[i];
+				sr[i] = similar[i] / samplesClass.get(i).size();
 
-			int targetValue = accountTargetValue.getOrDefault(accountId, 0);
 			int predictValue = 1;
 			if (sr[0] < sr[1] && sr[0] < sr[2])
 				predictValue = 0;
 			else if (sr[2] < sr[0] && sr[2] < sr[1])
 				predictValue = 2;
 
+			int targetValue = accountTargetValue.getOrDefault(accountId, 0);
 			res[targetValue][predictValue]++;
+			
+			out.printf("account:%s, input:%s, target:%d, predict:%d, similar:%f\t%f\t%f, avg similar:%f\t%f\t%f %n"
+					, accountId, input.toString(), targetValue, predictValue
+					, similar[0], similar[1], similar[2]
+					, sr[0], sr[1], sr[2]);
 		}
 
 		int all = 0;
