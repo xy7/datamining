@@ -11,11 +11,10 @@ import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.time.LocalDate;
 import java.util.HashMap;
-import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import org.apache.commons.io.Charsets;
 import org.apache.hadoop.fs.LocatedFileStatus;
@@ -44,82 +43,109 @@ public class ReadHiveSelfSimilar {
 		APPID = Utils.getOrDefault("appid", APPID);
 		SCORE_FREQ = Utils.getOrDefault("score_freq", 0);
 
-		TARGET_AFTTER_DAYS = Utils.getOrDefault("target_after_days", 14);
+		TARGET_AFTTER_DAYS = Utils.getOrDefault("target_after_days", 7);
 		numFeatures = Utils.getOrDefault("num_features", 14);
 
 		LocalDate start = LocalDate.parse(Utils.getOrDefault("train_start", "2015-11-01"));
-
-		LocalDate evalStart = LocalDate.parse(Utils.getOrDefault("eval_start", "2015-11-01"));
+		LocalDate end = LocalDate.parse(Utils.getOrDefault("train_end", "2015-11-01"));
 
 		// new code
 		// step1/3, load all of hive data to map, write to local file
 		// if exits local file, load to map
-		loadAllHiveData(start, start.plusDays(numFeatures-1));
-		loadAllHiveData(start.plusDays(TARGET_AFTTER_DAYS)
-				, start.plusDays(TARGET_AFTTER_DAYS + numFeatures - 1));
-
-		loadAllHiveData(evalStart, evalStart.plusDays(numFeatures-1));
-		loadAllHiveData(evalStart.plusDays(TARGET_AFTTER_DAYS)
-				, evalStart.plusDays(TARGET_AFTTER_DAYS + numFeatures - 1));
+		loadAllHiveData(start, end.plusDays(2 * TARGET_AFTTER_DAYS));
 
 		// step2/3, train data
-		Map<String, Vector> samples = mapTransfer(start);
+		Map<LocalDate, Map<String, Vector>> samples = mapTransfer(start, end, numFeatures);
 		out.println("train");
-		Map<Integer, List<Vector>> samplesClass = train(start, samples);
-		out.println("eval train samples");
-		eval(start, samples, samplesClass);
+		Map<Integer, List<Vector>> samplesClass = train(start, end, samples);
+		//out.println("eval train samples");
+		//eval(start, end, samples, samplesClass);
 
 		// step3/3, eval data
-		out.println("eval");
-		Map<String, Vector> evalSamples = mapTransfer(evalStart);
-		eval(evalStart, evalSamples, samplesClass);
+//		out.println("eval");
+//		Map<LocalDate, Map<String, Vector>> evalSamples = mapTransfer(evalStart);
+//		eval(evalStart, evalSamples, samplesClass);
 
 	}
 
-	private static Map<String, Vector> mapTransfer(LocalDate ld) {
+	private static Map<LocalDate, Map<String, Vector>> mapTransfer(LocalDate start, LocalDate end, int numFeatures) {
 
-		Map<String, Vector> accountIndex = new HashMap<>();
-		
-		int noZeroCnt = 0;
-		int zeroCnt = 0;
+		Map<LocalDate, Map<String, Vector>> ldAccountVec = new HashMap<>();
+
+		Map<LocalDate, Map<String, Integer>> lowLevelAccountIds = new HashMap<>();
+
+		for (LocalDate ld = start; !ld.isAfter(end); ld = ld.plusDays(1)) {
+
+			Map<String, Map<String, Integer>> accountMaps = ldAccountMaps.get(ld);
+			for (Map.Entry<String, Map<String, Integer>> e : accountMaps.entrySet()) {
+				String accountId = e.getKey();
+
+				Map<String, Integer> map = e.getValue();
+				int onlineDur = map.getOrDefault("online_dur", 0);
+				int roleLevel = map.getOrDefault("role_level", 0);
+				if (roleLevel < 20) {// 后续需要过滤掉
+					Map<String, Integer> lowLevel = new HashMap<>(1);
+					lowLevel.put(accountId, roleLevel);
+					lowLevelAccountIds.put(ld, lowLevel);
+				}
+
+				LocalDate beforLd = ld.minusDays(numFeatures - 1);
+				LocalDate beforSet = start.isAfter(beforLd) ? start : beforLd;
+				for (int i = 0; i < numFeatures; i++) {
+					LocalDate ldCur = beforSet.plusDays(i);
+					Map<String, Vector> accountVec = ldAccountVec.getOrDefault(ldCur, new HashMap<>());
+
+					ldAccountVec.put(ld, accountVec);
+					Vector v = accountVec.getOrDefault(accountId, new SequentialAccessSparseVector(numFeatures));
+					accountVec.put(accountId, v);
+					v.setQuick(numFeatures - i - 1, onlineDur);
+
+				}
+
+			}
+
+		}
+
+		filterMap(numFeatures, ldAccountVec, lowLevelAccountIds);
+
+		return ldAccountVec;
+	}
+
+	public static void filterMap(int numFeatures, Map<LocalDate, Map<String, Vector>> ldAccountVec,
+			Map<LocalDate, Map<String, Integer>> lowLevelAccountIds) {
+		// 移除级别低的用户向量
 		int lowLevelCnt = 0;
-		Set<String> allAccountIds = new HashSet<>();
-		for(int i=0;i<numFeatures/2;i++)
-			allAccountIds.addAll(ldAccountMaps.get(ld.plusDays(i)).keySet());
-	
-		for (String accountId : allAccountIds) {
-			Vector input = new SequentialAccessSparseVector(numFeatures);
-			int nozeroFeatureCnt = 0;
-			boolean isLowLevel = false;
+		for (Map.Entry<LocalDate, Map<String, Integer>> e : lowLevelAccountIds.entrySet()) {
 			for (int i = 0; i < numFeatures; i++) {
-				int onlineDur = ldAccountMaps.get(ld.plusDays(i))
-						.getOrDefault(accountId, new HashMap<>(0))
-						.getOrDefault("online_dur", 0);
-				input.setQuick(i, (double) onlineDur);
-				if(onlineDur > 0)
-					nozeroFeatureCnt++;
-				int roleLevel = ldAccountMaps.get(ld.plusDays(i))
-						.getOrDefault(accountId, new HashMap<>(0))
-						.getOrDefault("role_level", 0);
-				if(roleLevel <= 20)
-					isLowLevel = true;
-			}
-			
-			if(isLowLevel){
-				lowLevelCnt++;
-				continue;
-			}
-			
-			if(nozeroFeatureCnt >= 2 && nozeroFeatureCnt <= 13){//全为0元素时不放入
-				accountIndex.put(accountId, input);
-				noZeroCnt++;
-			} else {
-				zeroCnt++;
+				LocalDate ldCur = e.getKey().plusDays(i);
+				if (ldAccountVec.get(ldCur).remove(e.getValue()) != null) {
+					lowLevelCnt++;
+				}
 			}
 		}
 
-		out.printf("lowLevelCnt: %d, noZeroCnt: %d, zeroCnt: %d %n", lowLevelCnt, noZeroCnt ,zeroCnt);
-		return accountIndex;
+		// 移除登陆天次不够的用户向量
+		int noZeroCnt = 0;
+		int zeroCnt = 0;
+		Iterator<Map.Entry<LocalDate, Map<String, Vector>>> it = ldAccountVec.entrySet().iterator();
+		while (it.hasNext()) {
+			Map.Entry<LocalDate, Map<String, Vector>> e = it.next();
+			LocalDate ld = e.getKey();
+			Iterator<Map.Entry<String, Vector>> itInner = e.getValue().entrySet().iterator();
+			while (itInner.hasNext()) {
+				Map.Entry<String, Vector> eInner = itInner.next();
+				Vector v = eInner.getValue();
+				int n = v.getNumNonZeroElements();
+				if (n < 2 || n > 13) {
+					zeroCnt++;
+					itInner.remove();
+				} else {
+					noZeroCnt++;
+				}
+			}
+		}
+
+		out.printf("lowLevelCnt: %d, noZeroCnt: %d, zeroCnt: %d %n", lowLevelCnt, noZeroCnt, zeroCnt);
 	}
 
 	private static void loadHiveData(LocalDate ld) throws FileNotFoundException, IOException, ClassNotFoundException {
@@ -206,45 +232,51 @@ public class ReadHiveSelfSimilar {
 		return eval.minus(sample).norm(2) / eval.norm(2);
 	}
 
-	private static void eval(LocalDate evalStart, Map<String, Vector> inputs,
-			Map<Integer, List<Vector>> samplesClass) {
+	private static void eval(Map<LocalDate, Map<String, Integer>> accountTargetValue
+			, Map<LocalDate, Map<String, Vector>> samples
+			, Map<Integer, List<Vector>> samplesClass) {
 		out.println("eval start: ");
-		Map<String, Integer> accountTargetValue = getTargetValue(evalStart, inputs);
+		//Map<LocalDate, Map<String, Integer>> accountTargetValue = getTargetValue(start, end, samples);
 
 		int sampleCnt = 0;
 		Integer[][] res = { { 0, 0, 0 }, { 0, 0, 0 }, { 0, 0, 0 } };// abcd;
 
-		for (Map.Entry<String, Vector> eval : inputs.entrySet()) {
-			String accountId = eval.getKey();
-			Vector input = eval.getValue();
-			if (input == null)
-				continue;
+		for (Map.Entry<LocalDate, Map<String, Vector>> e : samples.entrySet()) {
+			LocalDate ld = e.getKey();
+			Map<String, Vector> map = e.getValue();
+			for (Map.Entry<String, Vector> eInner : map.entrySet()) {
+				String accountId = eInner.getKey();
+				Vector input = eInner.getValue();
+				int targetValue = accountTargetValue.get(ld).getOrDefault(accountId, 0);
+				if (targetValue < 0 || targetValue > 2)
+					continue;
 
-			double[] similar = { 0.0, 0.0, 0.0 };// 绝对相似度
-			for (int i = 0; i <= 2; i++) {
-				for (Vector v : samplesClass.get(i)) {
-					similar[i] += vectorSimilar(input, v);
+				double[] similar = { 0.0, 0.0, 0.0 };// 绝对相似度
+				for (int i = 0; i <= 2; i++) {
+					for (Vector v : samplesClass.get(i)) {
+						similar[i] += vectorSimilar(input, v);
+					}
 				}
-			}
 
-			double[] sr = { 0.0, 0.0, 0.0 };// 平均相似度
-			for (int i = 0; i <= 2; i++)
-				sr[i] = similar[i] / samplesClass.get(i).size();
+				double[] sr = { 0.0, 0.0, 0.0 };// 平均相似度
+				for (int i = 0; i <= 2; i++)
+					sr[i] = similar[i] / samplesClass.get(i).size();
 
-			int predictValue = 1;
-			if (sr[0] < sr[1] && sr[0] < sr[2])
-				predictValue = 0;
-			else if (sr[2] < sr[0] && sr[2] < sr[1])
-				predictValue = 2;
+				int predictValue = 1;
+				if (sr[0] < sr[1] && sr[0] < sr[2])
+					predictValue = 0;
+				else if (sr[2] < sr[0] && sr[2] < sr[1])
+					predictValue = 2;
 
-			int targetValue = accountTargetValue.getOrDefault(accountId, 0);
-			res[targetValue][predictValue]++;
-			
-			if (SCORE_FREQ != 0 && (++sampleCnt) % SCORE_FREQ == 0) {
-				out.printf("account:%s, input:%s, target:%d, predict:%d, similar:%f\t%f\t%f, avg similar:%f\t%f\t%f %n"
-						, accountId, input.toString(), targetValue, predictValue
-						, similar[0], similar[1], similar[2]
-						, sr[0], sr[1], sr[2]);
+				res[targetValue][predictValue]++;
+
+				if (SCORE_FREQ != 0 && (++sampleCnt) % SCORE_FREQ == 0) {
+					out.printf(
+							"account:%s, input:%s, target:%d, predict:%d, similar:%f\t%f\t%f, avg similar:%f\t%f\t%f %n"
+							, accountId, input.toString(), targetValue, predictValue
+							, similar[0], similar[1], similar[2]
+							, sr[0], sr[1], sr[2]);
+				}
 			}
 		}
 
@@ -263,36 +295,38 @@ public class ReadHiveSelfSimilar {
 
 	}
 
-	private static Map<Integer, List<Vector>> train(LocalDate ld, Map<String, Vector> samples) {
-		out.println("train: " + ld.toString());
+	private static Map<Integer, List<Vector>> train(LocalDate start, LocalDate end
+			, Map<LocalDate, Map<String, Vector>> samples) {
+		out.println("train: " + start.toString());
 		Map<Integer, List<Vector>> sampleClass = new HashMap<>();
 		for (int i = 0; i < 3; i++)
 			sampleClass.put(i, new LinkedList<>());
 
 		int[] sampleStat = { 0, 0, 0 };
 
-		Map<String, Integer> accountTargetValue = getTargetValue(ld, samples);
-		for (Map.Entry<String, Vector> sample : samples.entrySet()) {
+		Map<LocalDate, Map<String, Integer>> accountTargetValue = getTargetValue(start, end, samples);
+		for (Map.Entry<LocalDate, Map<String, Vector>> e : samples.entrySet()) {
+			LocalDate ld = e.getKey();
+			Map<String, Vector> map = e.getValue();
+			for (Map.Entry<String, Vector> eInner : map.entrySet()) {
+				String accountId = eInner.getKey();
+				Vector input = eInner.getValue();
+				int targetValue = accountTargetValue.get(ld).getOrDefault(accountId, 0);
+				if (targetValue < 0 || targetValue > 2)
+					continue;
 
-			String accountId = sample.getKey();
-			Vector input = sample.getValue();
-			if (input == null)
-				continue;
-
-			int targetValue = accountTargetValue.getOrDefault(accountId, 0);
-			if (targetValue < 0 || targetValue > 2)
-				continue;
-
-			sampleClass.get(targetValue).add(input);
-			sampleStat[targetValue]++;
+				sampleClass.get(targetValue).add(input);
+				sampleStat[targetValue]++;
+			}
 
 		}
 
 		out.printf("train finish, lost cnt:%d, may cnt:%d, retain cnt: %d %n", sampleStat[0], sampleStat[1],
 				sampleStat[2]);
+		
+		eval(accountTargetValue, samples, sampleClass);
 
 		return sampleClass;
-
 	}
 
 	private static String lineSplit(String line, LocalDate ld, Map<String, Integer> res) {
@@ -359,23 +393,29 @@ public class ReadHiveSelfSimilar {
 		return res;
 	}
 
-	private static Map<String, Integer> getTargetValue(LocalDate ld, Map<String, Vector> samples) {
+	private static Map<LocalDate, Map<String, Integer>> getTargetValue(LocalDate start, LocalDate end
+			, Map<LocalDate, Map<String, Vector>> samples) {
 
-		Map<String, Vector> target = mapTransfer(ld.plusDays(TARGET_AFTTER_DAYS));
+		Map<LocalDate, Map<String, Vector>> ldTarget = mapTransfer(start.plusDays(numFeatures)
+				, end.plusDays(numFeatures), TARGET_AFTTER_DAYS);
 
-		Map<String, Integer> res = new HashMap<>(samples.size());
-
+		Map<LocalDate, Map<String, Integer>> res = new HashMap<>(samples.size());
 		int[] rowstat = { 0, 0, 0, 0, 0, 0 };
-		for (String accountId : samples.keySet()) {
-			if (!target.containsKey(accountId)) {
-				res.put(accountId, 0);
-				rowstat[2]++;
-			} else {
-				try {
-					Vector v = target.get(accountId);
-
+		for (Map.Entry<LocalDate, Map<String, Vector>> e : samples.entrySet()) {
+			LocalDate ld = e.getKey();
+			Map<String, Integer> targetClass = new HashMap<>();
+			res.put(ld, targetClass);
+			Map<String, Vector> target = ldTarget.get(ld);
+			Map<String, Vector> map = e.getValue();
+			for (Map.Entry<String, Vector> eInner : map.entrySet()) {
+				String accountId = eInner.getKey();
+				if (!target.containsKey(accountId)) {
+					targetClass.put(accountId, 0);
+					rowstat[2]++;
+				} else {
+					Vector v = eInner.getValue();
 					int nextHalfLoginDaycnt = 0;
-					for (int i = 0; i < 7; i++) {
+					for (int i = 0; i < TARGET_AFTTER_DAYS / 2; i++) {
 						if (v.get(i) >= 1.0) {
 							nextHalfLoginDaycnt = 1;
 							break;
@@ -383,7 +423,7 @@ public class ReadHiveSelfSimilar {
 					}
 
 					int lastHalfLoginDaycnt = 0;
-					for (int i = 7; i < 14; i++) {
+					for (int i = TARGET_AFTTER_DAYS / 2; i < TARGET_AFTTER_DAYS; i++) {
 						if (v.get(i) >= 1.0) {
 							lastHalfLoginDaycnt = 1;
 							break;
@@ -397,20 +437,20 @@ public class ReadHiveSelfSimilar {
 					} else if (nextHalfLoginDaycnt == 0) {// 流失用户
 						targetValue = 0;
 						rowstat[4]++;
-					} else{
+					} else {
 						rowstat[5]++;
 					}
 
-					res.put(accountId, targetValue);
-				} catch (Exception e) {
-					rowstat[1]++;
+					targetClass.put(accountId, targetValue);
 				}
-			}
 
+			}
 		}
 
-		out.printf("get target null cnt: %d, get field exception cnt: %d, target not exits:%d, lost cnt:%d, may cnt:%d, retain cnt:%d %n"
+		out.printf(
+				"get target null cnt: %d, get field exception cnt: %d, target not exits:%d, lost cnt:%d, may cnt:%d, retain cnt:%d %n"
 				, rowstat[0], rowstat[1], rowstat[2], rowstat[4], rowstat[5], rowstat[3]);
+
 		return res;
 	}
 
