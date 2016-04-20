@@ -55,13 +55,14 @@ public class ReadHiveSelfSimilar {
 		loadAllHiveData(start, end.plusDays(2 * TARGET_AFTTER_DAYS));
 
 		// step2/3, train data
-		Map<LocalDate, Map<String, Vector>> samples = mapTransfer(start, end, numFeatures);
+		Map<LocalDate, Map<String, Vector>> samples = mapTransfer(start, end, numFeatures, true);
 		out.println("train");
 		Map<Integer, List<Vector>> samplesClass = train(start, end, samples);
 		// out.println("eval train samples");
 		// eval(start, end, samples, samplesClass);
 
 		// step3/3, eval data
+		// eval 需要增加剔除过滤的逻辑
 		// out.println("eval");
 		// Map<LocalDate, Map<String, Vector>> evalSamples =
 		// mapTransfer(evalStart);
@@ -69,7 +70,7 @@ public class ReadHiveSelfSimilar {
 
 	}
 
-	private static Map<LocalDate, Map<String, Vector>> mapTransfer(LocalDate start, LocalDate end, int numFeatures) {
+	private static Map<LocalDate, Map<String, Vector>> mapTransfer(LocalDate start, LocalDate end, int numFeatures, boolean filter) {
 
 		Map<LocalDate, Map<String, Vector>> ldAccountVec = new HashMap<>();
 
@@ -96,7 +97,7 @@ public class ReadHiveSelfSimilar {
 					LocalDate ldCur = beforSet.plusDays(i);
 					Map<String, Vector> accountVec = ldAccountVec.getOrDefault(ldCur, new HashMap<>());
 
-					ldAccountVec.put(ld, accountVec);
+					ldAccountVec.put(ldCur, accountVec);
 					Vector v = accountVec.getOrDefault(accountId, new SequentialAccessSparseVector(numFeatures));
 					accountVec.put(accountId, v);
 					v.setQuick(numFeatures - i - 1, onlineDur);
@@ -107,7 +108,8 @@ public class ReadHiveSelfSimilar {
 
 		}
 
-		filterMap(numFeatures, ldAccountVec, lowLevelAccountIds);
+		if(filter)
+			filterMap(numFeatures, ldAccountVec, lowLevelAccountIds);
 
 		return ldAccountVec;
 	}
@@ -308,7 +310,7 @@ public class ReadHiveSelfSimilar {
 
 		int[] sampleStat = { 0, 0, 0 };
 
-		Map<LocalDate, Map<String, Integer>> accountTargetValue = getTargetValue(start, end, samples);
+		Map<LocalDate, Map<String, Integer>> accountTargetValue = getTargetValue(start, end, samples, true);
 		for (Map.Entry<LocalDate, Map<String, Vector>> e : samples.entrySet()) {
 			LocalDate ld = e.getKey();
 			Map<String, Vector> map = e.getValue();
@@ -398,10 +400,10 @@ public class ReadHiveSelfSimilar {
 	}
 
 	private static Map<LocalDate, Map<String, Integer>> getTargetValue(LocalDate start, LocalDate end
-			, Map<LocalDate, Map<String, Vector>> samples) {
+			, Map<LocalDate, Map<String, Vector>> samples, boolean filter) {
 
 		Map<LocalDate, Map<String, Vector>> ldTarget = mapTransfer(start.plusDays(numFeatures)
-				, end.plusDays(numFeatures), TARGET_AFTTER_DAYS);
+				, end.plusDays(numFeatures), TARGET_AFTTER_DAYS, filter);
 
 		Map<LocalDate, Map<String, Integer>> res = new HashMap<>(samples.size());
 		int[] rowstat = { 0, 0, 0, 0, 0, 0 };
