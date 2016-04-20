@@ -10,18 +10,14 @@ import java.io.ObjectOutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 
 import org.apache.commons.io.Charsets;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.RemoteIterator;
-import org.apache.mahout.classifier.sgd.L1;
-import org.apache.mahout.classifier.sgd.OnlineLogisticRegression;
 import org.apache.mahout.math.RandomAccessSparseVector;
 import org.apache.mahout.math.Vector;
 
@@ -232,6 +228,8 @@ public class ReadHiveSelfSimilar {
 	private static Map<Integer, List<Vector>> train(LocalDate ld, Map<String, Vector> samples) {
 		out.println("train: " + ld.toString());
 		Map<Integer, List<Vector>> sampleClass = new HashMap<>();
+		for(int i=0;i<3;i++)
+			sampleClass.put(i, new LinkedList<>());
 
 		int[] sampleStat = { 0, 0, 0 };
 
