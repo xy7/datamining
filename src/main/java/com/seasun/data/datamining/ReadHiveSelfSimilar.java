@@ -88,14 +88,17 @@ public class ReadHiveSelfSimilar {
 	
 		for (String accountId : allAccountIds) {
 			Vector input = new RandomAccessSparseVector(numFeatures);
+			int zeroFeatureCnt = 0;
 			for (int i = 0; i < numFeatures; i++) {
 				int onlineDur = ldAccountMaps.get(ld.plusDays(i))
 						.getOrDefault(accountId, new HashMap<>(0))
 						.getOrDefault("online_dur", 0);
 				input.setQuick(i, (double) onlineDur);
+				if(onlineDur == 0)
+					zeroFeatureCnt++;
 			}
 			
-			if(input.nonZeroes().iterator().hasNext()){//全为0元素时不放入
+			if(zeroFeatureCnt <= 8){//全为0元素时不放入
 				accountIndex.put(accountId, input);
 				noZeroCnt++;
 			} else {
