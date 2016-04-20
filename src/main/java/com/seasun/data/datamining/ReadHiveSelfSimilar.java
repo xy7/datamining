@@ -20,7 +20,7 @@ import java.util.Set;
 import org.apache.commons.io.Charsets;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.RemoteIterator;
-import org.apache.mahout.math.RandomAccessSparseVector;
+import org.apache.mahout.math.SequentialAccessSparseVector;
 import org.apache.mahout.math.Vector;
 
 /*
@@ -87,7 +87,7 @@ public class ReadHiveSelfSimilar {
 			allAccountIds.addAll(ldAccountMaps.get(ld.plusDays(i)).keySet());
 	
 		for (String accountId : allAccountIds) {
-			Vector input = new RandomAccessSparseVector(numFeatures);
+			Vector input = new SequentialAccessSparseVector(numFeatures);
 			int nozeroFeatureCnt = 0;
 			for (int i = 0; i < numFeatures; i++) {
 				int onlineDur = ldAccountMaps.get(ld.plusDays(i))
@@ -98,7 +98,7 @@ public class ReadHiveSelfSimilar {
 					nozeroFeatureCnt++;
 			}
 			
-			if(nozeroFeatureCnt >= 4 && nozeroFeatureCnt <= 13){//全为0元素时不放入
+			if(nozeroFeatureCnt >= 3 && nozeroFeatureCnt <= 13){//全为0元素时不放入
 				accountIndex.put(accountId, input);
 				noZeroCnt++;
 			} else {
