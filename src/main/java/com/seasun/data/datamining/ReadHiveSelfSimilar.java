@@ -122,6 +122,11 @@ public class ReadHiveSelfSimilar {
 			for (String s : e.getValue().keySet()) {
 				for (int i = 0; i < numFeatures; i++) {
 					LocalDate ldCur = e.getKey().plusDays(i);
+					if(!ldAccountVec.containsKey(ldCur)){
+						out.println("map not exists: " + ldCur + ", " + s);
+						continue;
+					}
+					
 					if (ldAccountVec.get(ldCur).remove(s) != null) {
 						lowLevelCnt++;
 					}
