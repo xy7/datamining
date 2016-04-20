@@ -88,17 +88,17 @@ public class ReadHiveSelfSimilar {
 	
 		for (String accountId : allAccountIds) {
 			Vector input = new RandomAccessSparseVector(numFeatures);
-			int zeroFeatureCnt = 0;
+			int nozeroFeatureCnt = 0;
 			for (int i = 0; i < numFeatures; i++) {
 				int onlineDur = ldAccountMaps.get(ld.plusDays(i))
 						.getOrDefault(accountId, new HashMap<>(0))
 						.getOrDefault("online_dur", 0);
 				input.setQuick(i, (double) onlineDur);
-				if(onlineDur == 0)
-					zeroFeatureCnt++;
+				if(onlineDur > 0)
+					nozeroFeatureCnt++;
 			}
 			
-			if(zeroFeatureCnt <= 8){//全为0元素时不放入
+			if(nozeroFeatureCnt >= 4 && nozeroFeatureCnt <= 13){//全为0元素时不放入
 				accountIndex.put(accountId, input);
 				noZeroCnt++;
 			} else {
@@ -191,7 +191,7 @@ public class ReadHiveSelfSimilar {
 	}
 
 	private static double vectorSimilar(Vector eval, Vector sample) {
-		return eval.minus(sample).norm(2) / sample.norm(2);
+		return eval.minus(sample).norm(2) / eval.norm(2);
 	}
 
 	private static void eval(LocalDate evalStart, Map<String, Vector> inputs,
