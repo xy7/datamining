@@ -335,7 +335,7 @@ public class ReadHiveSelfSimilar {
 
 		Map<String, Integer> res = new HashMap<>(samples.size());
 
-		int[] rowstat = { 0, 0 };
+		int[] rowstat = { 0, 0, 0, 0, 0, 0 };
 		for (String accountId : samples.keySet()) {
 			if (!target.containsKey(accountId)) {
 				res.put(accountId, 0);
