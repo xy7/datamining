@@ -80,7 +80,8 @@ public class ReadHiveSelfSimilar {
 
 		Map<String, Vector> accountIndex = new HashMap<>();
 		
-		
+		int noZeroCnt = 0;
+		int zeroCnt = 0;
 		Set<String> allAccountIds = new HashSet<>();
 		for(int i=0;i<numFeatures/2;i++)
 			allAccountIds.addAll(ldAccountMaps.get(ld.plusDays(i)).keySet());
@@ -93,10 +94,16 @@ public class ReadHiveSelfSimilar {
 						.getOrDefault("online_dur", 0);
 				input.setQuick(i, (double) onlineDur);
 			}
-
-			accountIndex.put(accountId, input);
+			
+			if(input.nonZeroes().iterator().hasNext()){//全为0元素时不放入
+				accountIndex.put(accountId, input);
+				noZeroCnt++;
+			} else {
+				zeroCnt++;
+			}
 		}
 
+		out.println("noZeroCnt: " + noZeroCnt + " zeroCnt: " + zeroCnt);
 		return accountIndex;
 	}
 
