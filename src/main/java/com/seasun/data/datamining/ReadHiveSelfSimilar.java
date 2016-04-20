@@ -58,13 +58,14 @@ public class ReadHiveSelfSimilar {
 		Map<LocalDate, Map<String, Vector>> samples = mapTransfer(start, end, numFeatures);
 		out.println("train");
 		Map<Integer, List<Vector>> samplesClass = train(start, end, samples);
-		//out.println("eval train samples");
-		//eval(start, end, samples, samplesClass);
+		// out.println("eval train samples");
+		// eval(start, end, samples, samplesClass);
 
 		// step3/3, eval data
-//		out.println("eval");
-//		Map<LocalDate, Map<String, Vector>> evalSamples = mapTransfer(evalStart);
-//		eval(evalStart, evalSamples, samplesClass);
+		// out.println("eval");
+		// Map<LocalDate, Map<String, Vector>> evalSamples =
+		// mapTransfer(evalStart);
+		// eval(evalStart, evalSamples, samplesClass);
 
 	}
 
@@ -116,10 +117,12 @@ public class ReadHiveSelfSimilar {
 		// 移除级别低的用户向量
 		int lowLevelCnt = 0;
 		for (Map.Entry<LocalDate, Map<String, Integer>> e : lowLevelAccountIds.entrySet()) {
-			for (int i = 0; i < numFeatures; i++) {
-				LocalDate ldCur = e.getKey().plusDays(i);
-				if (ldAccountVec.get(ldCur).remove(e.getValue()) != null) {
-					lowLevelCnt++;
+			for (String s : e.getValue().keySet()) {
+				for (int i = 0; i < numFeatures; i++) {
+					LocalDate ldCur = e.getKey().plusDays(i);
+					if (ldAccountVec.get(ldCur).remove(s) != null) {
+						lowLevelCnt++;
+					}
 				}
 			}
 		}
@@ -236,7 +239,8 @@ public class ReadHiveSelfSimilar {
 			, Map<LocalDate, Map<String, Vector>> samples
 			, Map<Integer, List<Vector>> samplesClass) {
 		out.println("eval start: ");
-		//Map<LocalDate, Map<String, Integer>> accountTargetValue = getTargetValue(start, end, samples);
+		// Map<LocalDate, Map<String, Integer>> accountTargetValue =
+		// getTargetValue(start, end, samples);
 
 		int sampleCnt = 0;
 		Integer[][] res = { { 0, 0, 0 }, { 0, 0, 0 }, { 0, 0, 0 } };// abcd;
@@ -323,7 +327,7 @@ public class ReadHiveSelfSimilar {
 
 		out.printf("train finish, lost cnt:%d, may cnt:%d, retain cnt: %d %n", sampleStat[0], sampleStat[1],
 				sampleStat[2]);
-		
+
 		eval(accountTargetValue, samples, sampleClass);
 
 		return sampleClass;
