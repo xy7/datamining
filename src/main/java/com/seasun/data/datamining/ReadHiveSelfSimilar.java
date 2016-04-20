@@ -82,6 +82,7 @@ public class ReadHiveSelfSimilar {
 		
 		int noZeroCnt = 0;
 		int zeroCnt = 0;
+		int lowLevelCnt = 0;
 		Set<String> allAccountIds = new HashSet<>();
 		for(int i=0;i<numFeatures/2;i++)
 			allAccountIds.addAll(ldAccountMaps.get(ld.plusDays(i)).keySet());
@@ -89,6 +90,7 @@ public class ReadHiveSelfSimilar {
 		for (String accountId : allAccountIds) {
 			Vector input = new SequentialAccessSparseVector(numFeatures);
 			int nozeroFeatureCnt = 0;
+			boolean isLowLevel = false;
 			for (int i = 0; i < numFeatures; i++) {
 				int onlineDur = ldAccountMaps.get(ld.plusDays(i))
 						.getOrDefault(accountId, new HashMap<>(0))
@@ -96,9 +98,19 @@ public class ReadHiveSelfSimilar {
 				input.setQuick(i, (double) onlineDur);
 				if(onlineDur > 0)
 					nozeroFeatureCnt++;
+				int roleLevel = ldAccountMaps.get(ld.plusDays(i))
+						.getOrDefault(accountId, new HashMap<>(0))
+						.getOrDefault("role_level", 0);
+				if(roleLevel <= 20)
+					isLowLevel = true;
 			}
 			
-			if(nozeroFeatureCnt >= 3 && nozeroFeatureCnt <= 13){//全为0元素时不放入
+			if(isLowLevel){
+				lowLevelCnt++;
+				continue;
+			}
+			
+			if(nozeroFeatureCnt >= 2 && nozeroFeatureCnt <= 13){//全为0元素时不放入
 				accountIndex.put(accountId, input);
 				noZeroCnt++;
 			} else {
@@ -106,7 +118,7 @@ public class ReadHiveSelfSimilar {
 			}
 		}
 
-		out.println("noZeroCnt: " + noZeroCnt + " zeroCnt: " + zeroCnt);
+		out.printf("lowLevelCnt: %d, noZeroCnt: %d, zeroCnt: %d %n", lowLevelCnt, noZeroCnt ,zeroCnt);
 		return accountIndex;
 	}
 
