@@ -11,9 +11,11 @@ import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.time.LocalDate;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.commons.io.Charsets;
 import org.apache.hadoop.fs.LocatedFileStatus;
@@ -51,11 +53,12 @@ public class ReadHiveSelfSimilar {
 		// step1/3, load all of hive data to map, write to local file
 		// if exits local file, load to map
 		loadAllHiveData(start, start.plusDays(numFeatures));
-		loadAllHiveData(start.plusDays(TARGET_AFTTER_DAYS), start.plusDays(TARGET_AFTTER_DAYS + numFeatures - 1));
+		loadAllHiveData(start.plusDays(TARGET_AFTTER_DAYS)
+				, start.plusDays(TARGET_AFTTER_DAYS + numFeatures - 1));
 
 		loadAllHiveData(evalStart, evalStart.plusDays(numFeatures));
-		loadAllHiveData(evalStart.plusDays(TARGET_AFTTER_DAYS),
-				evalStart.plusDays(TARGET_AFTTER_DAYS + numFeatures - 1));
+		loadAllHiveData(evalStart.plusDays(TARGET_AFTTER_DAYS)
+				, evalStart.plusDays(TARGET_AFTTER_DAYS + numFeatures - 1));
 
 		// step2/3, train data
 		Map<String, Vector> samples = mapTransfer(start);
@@ -75,16 +78,19 @@ public class ReadHiveSelfSimilar {
 
 		Map<String, Vector> accountIndex = new HashMap<>();
 		Vector input = new RandomAccessSparseVector(numFeatures);
+		
+		Set<String> allAccountIds = new HashSet<>();
+		for(int i=0;i<numFeatures/2;i++)
+			allAccountIds.addAll(ldAccountMaps.get(ld.plusDays(i)).keySet());
 
 		Map<String, Map<String, Integer>> accountMaps = ldAccountMaps.get(ld);
-		for (String accountId : accountMaps.keySet()) {
-			int onlineDur = accountMaps.get(accountId).getOrDefault("online_dur", 0);
-			input.setQuick(0, (double) onlineDur);
-			for (int i = 1; i < numFeatures; i++) {
-				int onlineDur2 = ldAccountMaps.get(ld.plusDays(i))
+		
+		for (String accountId : allAccountIds) {
+			for (int i = 0; i < numFeatures; i++) {
+				int onlineDur = ldAccountMaps.get(ld.plusDays(i))
 						.getOrDefault(accountId, new HashMap<>(0))
 						.getOrDefault("online_dur", 0);
-				input.setQuick(i, (double) onlineDur2);
+				input.setQuick(i, (double) onlineDur);
 			}
 
 			accountIndex.put(accountId, input);
@@ -148,6 +154,7 @@ public class ReadHiveSelfSimilar {
 			out.println("serial file exists read to Map");
 			ObjectInputStream in = new ObjectInputStream(new FileInputStream(file));
 			Map<String, Map<String, Integer>> accountMap = (Map<String, Map<String, Integer>>) in.readObject();
+			out.printf("date:%s size:%d %n", ld.toString(), accountMap.size());
 			ldAccountMaps.put(ld, accountMap);
 			in.close();
 		}
@@ -204,9 +211,9 @@ public class ReadHiveSelfSimilar {
 
 			int targetValue = accountTargetValue.getOrDefault(accountId, 0);
 			int predictValue = 1;
-			if (sr[0] > sr[1] && sr[0] > sr[2])
+			if (sr[0] < sr[1] && sr[0] < sr[2])
 				predictValue = 0;
-			else if (sr[2] > sr[0] && sr[2] > sr[1])
+			else if (sr[2] < sr[0] && sr[2] < sr[1])
 				predictValue = 2;
 
 			res[targetValue][predictValue]++;
