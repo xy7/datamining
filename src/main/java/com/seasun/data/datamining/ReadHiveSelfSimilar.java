@@ -52,11 +52,11 @@ public class ReadHiveSelfSimilar {
 		// new code
 		// step1/3, load all of hive data to map, write to local file
 		// if exits local file, load to map
-		loadAllHiveData(start, start.plusDays(numFeatures));
+		loadAllHiveData(start, start.plusDays(numFeatures-1));
 		loadAllHiveData(start.plusDays(TARGET_AFTTER_DAYS)
 				, start.plusDays(TARGET_AFTTER_DAYS + numFeatures - 1));
 
-		loadAllHiveData(evalStart, evalStart.plusDays(numFeatures));
+		loadAllHiveData(evalStart, evalStart.plusDays(numFeatures-1));
 		loadAllHiveData(evalStart.plusDays(TARGET_AFTTER_DAYS)
 				, evalStart.plusDays(TARGET_AFTTER_DAYS + numFeatures - 1));
 
@@ -65,7 +65,7 @@ public class ReadHiveSelfSimilar {
 		out.println("train");
 		Map<Integer, List<Vector>> samplesClass = train(start, samples);
 		out.println("eval train samples");
-		eval(evalStart, samples, samplesClass);
+		eval(start, samples, samplesClass);
 
 		// step3/3, eval data
 		out.println("eval");
@@ -77,15 +77,14 @@ public class ReadHiveSelfSimilar {
 	private static Map<String, Vector> mapTransfer(LocalDate ld) {
 
 		Map<String, Vector> accountIndex = new HashMap<>();
-		Vector input = new RandomAccessSparseVector(numFeatures);
+		
 		
 		Set<String> allAccountIds = new HashSet<>();
 		for(int i=0;i<numFeatures/2;i++)
 			allAccountIds.addAll(ldAccountMaps.get(ld.plusDays(i)).keySet());
-
-		Map<String, Map<String, Integer>> accountMaps = ldAccountMaps.get(ld);
-		
+	
 		for (String accountId : allAccountIds) {
+			Vector input = new RandomAccessSparseVector(numFeatures);
 			for (int i = 0; i < numFeatures; i++) {
 				int onlineDur = ldAccountMaps.get(ld.plusDays(i))
 						.getOrDefault(accountId, new HashMap<>(0))
@@ -340,6 +339,7 @@ public class ReadHiveSelfSimilar {
 		for (String accountId : samples.keySet()) {
 			if (!target.containsKey(accountId)) {
 				res.put(accountId, 0);
+				rowstat[2]++;
 			} else {
 				try {
 					Vector v = target.get(accountId);
@@ -363,8 +363,12 @@ public class ReadHiveSelfSimilar {
 					int targetValue = 1;// 将流失用户
 					if (nextHalfLoginDaycnt > 0 && lastHalfLoginDaycnt > 0) {// 留存用户
 						targetValue = 2;
+						rowstat[3]++;
 					} else if (nextHalfLoginDaycnt == 0) {// 流失用户
 						targetValue = 0;
+						rowstat[4]++;
+					} else{
+						rowstat[5]++;
 					}
 
 					res.put(accountId, targetValue);
@@ -375,7 +379,8 @@ public class ReadHiveSelfSimilar {
 
 		}
 
-		out.printf("get target null cnt: %d, get field exception cnt: %d %n", rowstat[0], rowstat[1]);
+		out.printf("get target null cnt: %d, get field exception cnt: %d, target not exits:%d, lost cnt:%d, may cnt:%d, retain cnt:%d %n"
+				, rowstat[0], rowstat[1], rowstat[2], rowstat[4], rowstat[5], rowstat[3]);
 		return res;
 	}
 
