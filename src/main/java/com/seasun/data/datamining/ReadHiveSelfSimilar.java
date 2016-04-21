@@ -32,7 +32,7 @@ public class ReadHiveSelfSimilar {
 
 	private static PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out, Charsets.UTF_8), true);
 
-	private static int numFeatures;
+	private static int numFeatures = 14;
 	private static int SCORE_FREQ;
 
 	public static Map<LocalDate, Map<String, Map<String, Integer>>> ldAccountMaps = new HashMap<>();
@@ -43,7 +43,7 @@ public class ReadHiveSelfSimilar {
 		APPID = Utils.getOrDefault("appid", APPID);
 		SCORE_FREQ = Utils.getOrDefault("score_freq", 0);
 
-		TARGET_AFTTER_DAYS = Utils.getOrDefault("target_after_days", 7);
+		TARGET_AFTTER_DAYS = Utils.getOrDefault("target_after_days", 14);
 		numFeatures = Utils.getOrDefault("num_features", 14);
 
 		LocalDate start = LocalDate.parse(Utils.getOrDefault("train_start", "2015-11-01"));
@@ -80,6 +80,10 @@ public class ReadHiveSelfSimilar {
 		for (LocalDate ld = start; !ld.isAfter(end.plusDays(numFeatures-1)); ld = ld.plusDays(1)) {
 
 			Map<String, Map<String, Integer>> accountMaps = ldAccountMaps.get(ld);
+			if(accountMaps == null){
+				out.println("ldAccountMaps get null ld: "+ld +"  map:" + ldAccountMaps);
+				return null;
+			}
 			for (Map.Entry<String, Map<String, Integer>> e : accountMaps.entrySet()) {
 				String accountId = e.getKey();
 
@@ -406,7 +410,7 @@ public class ReadHiveSelfSimilar {
 		return res;
 	}
 
-	private static Map<LocalDate, Map<String, Integer>> getTargetValue(LocalDate start, LocalDate end
+	public static Map<LocalDate, Map<String, Integer>> getTargetValue(LocalDate start, LocalDate end
 			, Map<LocalDate, Map<String, Vector>> samples, boolean filter) {
 
 		Map<LocalDate, Map<String, Vector>> ldTarget = mapTransfer(start.plusDays(numFeatures)
@@ -418,7 +422,11 @@ public class ReadHiveSelfSimilar {
 			LocalDate ld = e.getKey();
 			Map<String, Integer> targetClass = new HashMap<>();
 			res.put(ld, targetClass);
-			Map<String, Vector> target = ldTarget.get(ld);
+			Map<String, Vector> target = ldTarget.get(ld.plusDays(numFeatures));
+			if(target == null){
+				out.println("ldTarget get null ld: "+ld +"  ldTarget:" + ldTarget);
+				return null;
+			}
 			Map<String, Vector> map = e.getValue();
 			for (Map.Entry<String, Vector> eInner : map.entrySet()) {
 				String accountId = eInner.getKey();

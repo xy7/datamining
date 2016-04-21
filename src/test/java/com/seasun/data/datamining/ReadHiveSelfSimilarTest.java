@@ -48,22 +48,25 @@ public class ReadHiveSelfSimilarTest {
 	public void mapTransferTest(){
 		Map<LocalDate, Map<String, Map<String, Integer>>> ldAccountMaps = ReadHiveSelfSimilar.ldAccountMaps;
 		Map<String, Integer> cols = new HashMap<>();
-		cols.put("online_dur", 10);
-		cols.put("role_level", 20);
+		cols.put("online_dur", 0);
+		cols.put("role_level", 22);
 		
 		int numFeatures = 14;
 
 		
 		LocalDate start = LocalDate.parse("2016-03-01");
 		LocalDate end = LocalDate.parse("2016-03-14");
-		for (LocalDate ld = start; !ld.isAfter(end.plusDays(numFeatures-1)); ld = ld.plusDays(1)) {
+		for (LocalDate ld = start; !ld.isAfter(end.plusDays(2 * numFeatures)); ld = ld.plusDays(1)) {
 			Map<String, Map<String, Integer>> map = new HashMap<>();
 			map.put("account_1", new HashMap<String, Integer>(cols));
 			map.put("account_2", new HashMap<String, Integer>(cols));
 			ldAccountMaps.put(ld, map);
 		}
 		
-		System.out.println( ReadHiveSelfSimilar.mapTransfer(start, end, numFeatures, true) );
+		Map<LocalDate, Map<String, Vector>> samples = ReadHiveSelfSimilar.mapTransfer(start, end, numFeatures, true);
+		System.out.println( samples );
+		
+		System.out.println(ReadHiveSelfSimilar.getTargetValue(start, end, samples, false));
 		
 	}
 
