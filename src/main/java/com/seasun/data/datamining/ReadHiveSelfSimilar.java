@@ -88,6 +88,8 @@ public class ReadHiveSelfSimilar {
 			avgSamplesClass.put(e.getKey(), avg);
 		}
 		
+		out.printf("avgSamplesClass: %s %n", avgSamplesClass.toString());
+		
 		int sampleCnt = 0;
 		Integer[][] res = { { 0, 0, 0 }, { 0, 0, 0 }, { 0, 0, 0 } };// abcd;
 
