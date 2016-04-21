@@ -70,7 +70,7 @@ public class ReadHiveSelfSimilar {
 		out.println("eval");
 		Map<LocalDate, Map<String, Vector>> evalSamples = mapTransfer(evalDate, evalDate, numFeatures, true);
 		Map<LocalDate, Map<String, Integer>> accountTargetValue = getTargetValue(evalDate, evalDate, evalSamples, false);
-		eval(accountTargetValue, evalSamples, samplesClass);
+		eval2(accountTargetValue, evalSamples, samplesClass);
 
 	}
 
@@ -121,6 +121,19 @@ public class ReadHiveSelfSimilar {
 							, sr[0], sr[1], sr[2]);
 				}
 			}
+		}
+		
+		int all = 0;
+		for (int i = 0; i < 3; i++)
+			for (int j = 0; j < 3; j++)
+				all += res[i][j];
+
+		out.printf("result matrix all: %d %n", all);
+		for (int i = 0; i < 3; i++) {
+			for (int j = 0; j < 3; j++) {
+				out.printf("%2.4f \t", (double) res[i][j] / all);
+			}
+			out.printf("%n");
 		}
 	}
 
