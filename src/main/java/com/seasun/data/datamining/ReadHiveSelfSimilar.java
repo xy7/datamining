@@ -48,6 +48,9 @@ public class ReadHiveSelfSimilar {
 
 		LocalDate start = LocalDate.parse(Utils.getOrDefault("train_start", "2015-11-01"));
 		LocalDate end = LocalDate.parse(Utils.getOrDefault("train_end", "2015-11-01"));
+		
+//		LocalDate evalStart = LocalDate.parse(Utils.getOrDefault("eval_start", "2015-11-01"));
+//		LocalDate evalEnd = LocalDate.parse(Utils.getOrDefault("eval_end", "2015-11-01"));
 
 		// new code
 		// step1/3, load all of hive data to map, write to local file
@@ -63,10 +66,11 @@ public class ReadHiveSelfSimilar {
 
 		// step3/3, eval data
 		// eval 需要增加剔除过滤的逻辑
-		// out.println("eval");
-		// Map<LocalDate, Map<String, Vector>> evalSamples =
-		// mapTransfer(evalStart);
-		// eval(evalStart, evalSamples, samplesClass);
+		LocalDate evalDate = end.plusDays(1);
+		out.println("eval");
+		Map<LocalDate, Map<String, Vector>> evalSamples =mapTransfer(evalDate, evalDate, numFeatures, true);
+		Map<LocalDate, Map<String, Integer>> accountTargetValue = getTargetValue(evalDate, evalDate, evalSamples, false);
+		eval(accountTargetValue, evalSamples, samplesClass);
 
 	}
 
@@ -88,7 +92,7 @@ public class ReadHiveSelfSimilar {
 				String accountId = e.getKey();
 
 				Map<String, Integer> map = e.getValue();
-				int onlineDur = map.getOrDefault("online_dur", 0);
+				int onlineDur = map.getOrDefault("online_dur", 0)/300;
 				int roleLevel = map.getOrDefault("role_level", 0);
 				if (roleLevel < 20) {// 后续需要过滤掉
 					Map<String, Integer> lowLevel = lowLevelAccountIds.getOrDefault(ld, new HashMap<>());
@@ -245,7 +249,9 @@ public class ReadHiveSelfSimilar {
 	}
 
 	private static double vectorSimilar(Vector eval, Vector sample) {
-		return eval.minus(sample).norm(2) / eval.norm(2);
+		//return eval.minus(sample).norm(2) / eval.norm(2);
+		Vector diff = eval.minus(sample);
+		return diff.dot(diff);
 	}
 
 	private static void eval(Map<LocalDate, Map<String, Integer>> accountTargetValue
