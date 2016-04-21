@@ -299,7 +299,7 @@ public class ReadHive{
 			return null;
 		}
 		LocalDate firstLoginDate = LocalDate.parse(fistLoginDate);
-		int uptodate = Utils.dateDiff(ld, firstLoginDate);
+		int uptodate = Utils.dateDiff(ld, firstLoginDate) + 1;
 		if(uptodate < 14){
 			//out.println("uptodate < 14: " + firstLoginDate);
 			rowstat[2]++;

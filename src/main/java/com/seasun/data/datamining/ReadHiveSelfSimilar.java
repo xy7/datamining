@@ -35,7 +35,7 @@ public class ReadHiveSelfSimilar {
 	private static int numFeatures;
 	private static int SCORE_FREQ;
 
-	private static Map<LocalDate, Map<String, Map<String, Integer>>> ldAccountMaps = new HashMap<>();
+	public static Map<LocalDate, Map<String, Map<String, Integer>>> ldAccountMaps = new HashMap<>();
 
 	public static void main(String[] args) throws Exception {
 
@@ -70,13 +70,14 @@ public class ReadHiveSelfSimilar {
 
 	}
 
-	private static Map<LocalDate, Map<String, Vector>> mapTransfer(LocalDate start, LocalDate end, int numFeatures, boolean filter) {
+	public static Map<LocalDate, Map<String, Vector>> mapTransfer(LocalDate start, LocalDate end
+			, int numFeatures, boolean filter) {
 
 		Map<LocalDate, Map<String, Vector>> ldAccountVec = new HashMap<>();
 
 		Map<LocalDate, Map<String, Integer>> lowLevelAccountIds = new HashMap<>();
 
-		for (LocalDate ld = start; !ld.isAfter(end); ld = ld.plusDays(1)) {
+		for (LocalDate ld = start; !ld.isAfter(end.plusDays(numFeatures-1)); ld = ld.plusDays(1)) {
 
 			Map<String, Map<String, Integer>> accountMaps = ldAccountMaps.get(ld);
 			for (Map.Entry<String, Map<String, Integer>> e : accountMaps.entrySet()) {
@@ -86,22 +87,23 @@ public class ReadHiveSelfSimilar {
 				int onlineDur = map.getOrDefault("online_dur", 0);
 				int roleLevel = map.getOrDefault("role_level", 0);
 				if (roleLevel < 20) {// 后续需要过滤掉
-					Map<String, Integer> lowLevel = new HashMap<>(1);
+					Map<String, Integer> lowLevel = lowLevelAccountIds.getOrDefault(ld, new HashMap<>());
 					lowLevel.put(accountId, roleLevel);
 					lowLevelAccountIds.put(ld, lowLevel);
 				}
 
 				LocalDate beforLd = ld.minusDays(numFeatures - 1);
 				LocalDate beforSet = start.isAfter(beforLd) ? start : beforLd;
-				for (int i = 0; i < numFeatures; i++) {
-					LocalDate ldCur = beforSet.plusDays(i);
+
+				for (LocalDate ldCur = beforSet; !ldCur.isAfter(ld); ldCur = ldCur.plusDays(1)) {
+					if(ldCur.isAfter(end))//超过end日期向量不全，舍弃
+						break;
 					Map<String, Vector> accountVec = ldAccountVec.getOrDefault(ldCur, new HashMap<>());
-
-					ldAccountVec.put(ldCur, accountVec);
 					Vector v = accountVec.getOrDefault(accountId, new SequentialAccessSparseVector(numFeatures));
+					int index = Utils.dateDiff(ld, ldCur);
+					v.setQuick(index, onlineDur);
 					accountVec.put(accountId, v);
-					v.setQuick(numFeatures - i - 1, onlineDur);
-
+					ldAccountVec.put(ldCur, accountVec);
 				}
 
 			}
@@ -123,7 +125,7 @@ public class ReadHiveSelfSimilar {
 				for (int i = 0; i < numFeatures; i++) {
 					LocalDate ldCur = e.getKey().plusDays(i);
 					if(!ldAccountVec.containsKey(ldCur)){
-						out.println("map not exists: " + ldCur + ", " + s);
+						//越界，略过
 						continue;
 					}
 					
@@ -146,7 +148,7 @@ public class ReadHiveSelfSimilar {
 				Map.Entry<String, Vector> eInner = itInner.next();
 				Vector v = eInner.getValue();
 				int n = v.getNumNonZeroElements();
-				if (n < 2 || n > 13) {
+				if (n < 2) {
 					zeroCnt++;
 					itInner.remove();
 				} else {
@@ -315,7 +317,7 @@ public class ReadHiveSelfSimilar {
 
 		int[] sampleStat = { 0, 0, 0 };
 
-		Map<LocalDate, Map<String, Integer>> accountTargetValue = getTargetValue(start, end, samples, true);
+		Map<LocalDate, Map<String, Integer>> accountTargetValue = getTargetValue(start, end, samples, false);
 		for (Map.Entry<LocalDate, Map<String, Vector>> e : samples.entrySet()) {
 			LocalDate ld = e.getKey();
 			Map<String, Vector> map = e.getValue();
@@ -368,7 +370,7 @@ public class ReadHiveSelfSimilar {
 		// return null;
 		// }
 		LocalDate firstLoginDate = LocalDate.parse(fistLoginDate);
-		int uptodate = Utils.dateDiff(ld, firstLoginDate);
+		int uptodate = Utils.dateDiff(ld, firstLoginDate) + 1;
 		res.put("up_to_date", uptodate);
 
 		// res.putAll(parse2map(mapStr));

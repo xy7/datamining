@@ -200,19 +200,19 @@ public class Utils {
 				, minRes[0], minRes[1], minRes[2]);
 	}
 	
-	//return day1 - day2 + 1
+	//return day1 - day2
 	public static int dateDiff(LocalDate day1, LocalDate day2){
 		if(day1.equals(day2)){
 			return 0;
 		} else if(day1.isAfter(day2) ){
 			int i = 0;
-			for(LocalDate ld=day2; !ld.isAfter(day1); ld=ld.plusDays(1)){
+			for(LocalDate ld=day2; ld.isBefore(day1); ld=ld.plusDays(1)){
 				i++;
 			}
 			return i;
 		} else if(day1.isBefore(day2)) {
 			int i = 0;
-			for(LocalDate ld=day1; !ld.isAfter(day2); ld=ld.plusDays(1)){
+			for(LocalDate ld=day1; ld.isBefore(day2); ld=ld.plusDays(1)){
 				i++;
 			}
 			return -1*i;

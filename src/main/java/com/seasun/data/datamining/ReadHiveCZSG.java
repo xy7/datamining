@@ -309,7 +309,7 @@ public class ReadHiveCZSG {
 			return null;
 		}
 		LocalDate firstLoginDate = LocalDate.parse(fistLoginDate);
-		int uptodate = Utils.dateDiff(ld, firstLoginDate);
+		int uptodate = Utils.dateDiff(ld, firstLoginDate) + 1;
 		res.put("up_to_date", uptodate);
 
 		// res.putAll(parse2map(mapStr));
