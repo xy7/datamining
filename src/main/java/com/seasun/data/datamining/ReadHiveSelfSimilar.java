@@ -122,7 +122,7 @@ public class ReadHiveSelfSimilar {
 			for(int b=0;b<sizeB;b++){
 				Vector vb = listB.get(b);
 				double sb = sB[b];
-				double sMax = sa > sb?sa:sb;
+				double sMax = sa + sb;
 				double similar = vectorSimilar(va, vb)/sMax;
 				avg +=  similar/sizeAB;
 				if(similar > max){
