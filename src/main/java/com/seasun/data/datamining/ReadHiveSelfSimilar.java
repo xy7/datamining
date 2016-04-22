@@ -34,6 +34,7 @@ public class ReadHiveSelfSimilar {
 
 	private static int numFeatures = 14;
 	private static int SCORE_FREQ;
+	private static double LOST_THRESHOLD = 1.0;
 
 	public static Map<LocalDate, Map<String, Map<String, Integer>>> ldAccountMaps = new HashMap<>();
 
@@ -45,6 +46,7 @@ public class ReadHiveSelfSimilar {
 
 		TARGET_AFTTER_DAYS = Utils.getOrDefault("target_after_days", 14);
 		numFeatures = Utils.getOrDefault("num_features", 14);
+		LOST_THRESHOLD = Utils.getOrDefault("lost_threshold", 1.0);
 
 		LocalDate start = LocalDate.parse(Utils.getOrDefault("train_start", "2015-11-01"));
 		LocalDate end = LocalDate.parse(Utils.getOrDefault("train_end", "2015-11-01"));
@@ -575,7 +577,7 @@ public class ReadHiveSelfSimilar {
 					Vector v = eInner.getValue();
 					int nextHalfLoginDaycnt = 0;
 					for (int i = 0; i < TARGET_AFTTER_DAYS / 2; i++) {
-						if (v.get(i) >= 1.0) {
+						if (v.get(i) > LOST_THRESHOLD) {
 							nextHalfLoginDaycnt = 1;
 							break;
 						}
@@ -583,7 +585,7 @@ public class ReadHiveSelfSimilar {
 
 					int lastHalfLoginDaycnt = 0;
 					for (int i = TARGET_AFTTER_DAYS / 2; i < TARGET_AFTTER_DAYS; i++) {
-						if (v.get(i) >= 1.0) {
+						if (v.get(i) > LOST_THRESHOLD) {
 							lastHalfLoginDaycnt = 1;
 							break;
 						}
