@@ -62,7 +62,7 @@ public class ReadHiveSelfSimilar {
 		out.println("train");
 		Map<LocalDate, Map<String, Integer>> accountTargetValue = getTargetValue(start, end, samples, false);
 		Map<Integer, List<Vector>> samplesClass = getClassValue(accountTargetValue, samples);
-		semilarAnalysis(samplesClass);
+		similarAnalysis(samplesClass);
 //		eval2(accountTargetValue, samples, samplesClass);
 
 		// step3/3, eval data
@@ -75,7 +75,7 @@ public class ReadHiveSelfSimilar {
 
 	}
 	
-	public static void semilarAnalysis(Map<Integer, List<Vector>> samplesClass){
+	public static void similarAnalysis(Map<Integer, List<Vector>> samplesClass){
 
 		double[][] mins = new double[3][3];
 		double[][] avgs = new double[3][3];
@@ -98,7 +98,7 @@ public class ReadHiveSelfSimilar {
 	
 	public static void printArray(double[][] mins){
 		for(int i=0;i<mins.length;i++){
-			for(int j=i;j<mins[0].length;j++){
+			for(int j=0;j<mins[0].length;j++){
 				out.printf("%f\t", mins[i][j]);
 			}
 			out.printf("%n");
@@ -123,13 +123,15 @@ public class ReadHiveSelfSimilar {
 				double sMax = sa > sb?sa:sb;
 				double similar = vectorSimilar(va, vb)/sMax;
 				avg +=  similar/sizeAB;
-				if(similar > max)
+				if(similar > max){
 					max = similar;
+					out.printf("get max: %f, va:%s, vb:%s %n", max, va.toString(), vb.toString());
+				}
 				if(similar < min)
 					min = similar;
 			}
 		}
-		out.printf("min:%f, avg:%f, max:%f", min, avg, max);
+		out.printf("min:%f, avg:%f, max:%f %n", min, avg, max);
 		double[] res = {min, avg, max};
 		return res;
 	}
