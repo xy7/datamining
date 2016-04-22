@@ -13,14 +13,14 @@ public class ReadHiveSelfSimilarTest {
 
 	@Test
 	public void test() {
-		Vector input = new RandomAccessSparseVector(3);
-		System.out.println(input.toString() + ":" + input.norm(2));
-		
-		input.set(0, 1);
-		input.set(1, 2);
-		input.set(2, 1);
-		System.out.println(input.toString() + ":" + input.norm(2));
-		System.out.println(input.dot(input));
+//		Vector input = new RandomAccessSparseVector(3);
+//		System.out.println(input.toString() + ":" + input.norm(2));
+//		
+//		input.set(0, 1);
+//		input.set(1, 2);
+//		input.set(2, 1);
+//		System.out.println(input.toString() + ":" + input.norm(2));
+//		System.out.println(input.dot(input));
 		
 //		System.out.println(input.minus(input).norm(2)/input.norm(2));
 //		
