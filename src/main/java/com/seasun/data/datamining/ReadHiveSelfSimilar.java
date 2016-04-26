@@ -51,29 +51,28 @@ public class ReadHiveSelfSimilar {
 		LocalDate start = LocalDate.parse(Utils.getOrDefault("train_start", "2015-11-01"));
 		LocalDate end = LocalDate.parse(Utils.getOrDefault("train_end", "2015-11-01"));
 
-		// LocalDate evalStart = LocalDate.parse(Utils.getOrDefault("eval_start", "2015-11-01"));
-		// LocalDate evalEnd = LocalDate.parse(Utils.getOrDefault("eval_end", "2015-11-01"));
+		 LocalDate evalStart = LocalDate.parse(Utils.getOrDefault("eval_start", "2015-11-01"));
+		 LocalDate evalEnd = LocalDate.parse(Utils.getOrDefault("eval_end", "2015-11-01"));
 
 		// new code
 		// step1/3, load all of hive data to map, write to local file
 		// if exits local file, load to map
-		loadAllHiveData(start, end.plusDays(2 * TARGET_AFTTER_DAYS));
+		loadAllHiveData(start, evalEnd.plusDays(2 * TARGET_AFTTER_DAYS));
 
 		// step2/3, train data
 		Map<LocalDate, Map<String, Vector>> samples = mapTransfer(start, end, numFeatures, true);
 		out.println("train");
 		Map<LocalDate, Map<String, Integer>> accountTargetValue = getTargetValue(start, end, samples, false);
 		Map<Integer, List<Vector>> samplesClass = getClassValue(accountTargetValue, samples);
-		similarAnalysis(samplesClass);
-//		eval2(accountTargetValue, samples, samplesClass);
+//		similarAnalysis(samplesClass);
+		eval2(accountTargetValue, samples, samplesClass);
 
 		// step3/3, eval data
 		// eval 需要增加剔除过滤的逻辑
-//		LocalDate evalDate = end.plusDays(1);
-//		out.println("eval");
-//		Map<LocalDate, Map<String, Vector>> evalSamples = mapTransfer(evalDate, evalDate, numFeatures, true);
-//		Map<LocalDate, Map<String, Integer>> accountTargetValue2 = getTargetValue(evalDate, evalDate, evalSamples, false);
-//		eval2(accountTargetValue2, evalSamples, samplesClass);
+		out.println("eval");
+		Map<LocalDate, Map<String, Vector>> evalSamples = mapTransfer(evalStart, evalEnd, numFeatures, true);
+		Map<LocalDate, Map<String, Integer>> accountTargetValue2 = getTargetValue(evalStart, evalEnd, evalSamples, false);
+		eval2(accountTargetValue2, evalSamples, samplesClass);
 
 	}
 	
