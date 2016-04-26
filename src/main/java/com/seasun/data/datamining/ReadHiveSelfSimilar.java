@@ -385,9 +385,9 @@ public class ReadHiveSelfSimilar {
 	}
 
 	private static double vectorSimilar(Vector eval, Vector sample) {
-		// return eval.minus(sample).norm(2) / eval.norm(2);
-		Vector diff = eval.minus(sample);
-		return diff.dot(diff);
+		return eval.minus(sample).norm(2);
+//		Vector diff = eval.minus(sample);
+//		return diff.dot(diff);
 	}
 
 	private static void eval(Map<LocalDate, Map<String, Integer>> accountTargetValue
