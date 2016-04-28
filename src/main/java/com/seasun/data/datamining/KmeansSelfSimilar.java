@@ -60,7 +60,7 @@ public class KmeansSelfSimilar {
 		// new code
 		// step1/3, load all of hive data to map, write to local file
 		// if exits local file, load to map
-		loadAllHiveData(start, evalEnd.plusDays(2 * TARGET_AFTTER_DAYS));
+		loadAllHiveData(start, end.plusDays(2 * TARGET_AFTTER_DAYS));
 
 		// step2/3, train data
 		Map<LocalDate, Map<String, Vector>> samples = mapTransfer(start, end, numFeatures, true);
