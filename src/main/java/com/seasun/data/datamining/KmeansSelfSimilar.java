@@ -171,7 +171,7 @@ public class KmeansSelfSimilar {
 				sum += cs.get(j).getNumObservations();
 			}
 			for(int j=0;j<size;j++){
-				double rate = cs.get(j).getNumObservations()/sum;
+				double rate = (double)cs.get(j).getNumObservations()/sum;
 				if(rate < 0.1/size)
 					flag.get(i).put(j, rate);
 			}
