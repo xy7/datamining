@@ -29,18 +29,19 @@ public class KmeansUtil {
 
 	}// main
 	
-	public static List<Cluster> kmeansClass(List<Vector> inputs, double convergenceDelta) {
-		int k = 2;
-		List<Cluster> clustersPre = kmeansClass(inputs, k, convergenceDelta);
-		double avgRadiusPre = computeAvgRadius(clustersPre);
-		while(k<10){
-			k++;
-			List<Cluster> clustersThis = kmeansClass(inputs, k, convergenceDelta);
-			double avgRadiusThis = computeAvgRadius(clustersThis);
-			double delta = avgRadiusThis - avgRadiusPre;
-		}
-		return null;
-	}
+	//循环找出最佳的k
+//	public static List<Cluster> kmeansClass(List<Vector> inputs, double convergenceDelta) {
+//		int k = 2;
+//		List<Cluster> clustersPre = kmeansClass(inputs, k, convergenceDelta);
+//		double avgRadiusPre = computeAvgRadius(clustersPre);
+//		while(k<10){
+//			k++;
+//			List<Cluster> clustersThis = kmeansClass(inputs, k, convergenceDelta);
+//			double avgRadiusThis = computeAvgRadius(clustersThis);
+//			double delta = avgRadiusThis - avgRadiusPre;
+//		}
+//		return null;
+//	}
 	
 	public static double computeAvgRadius(List<Cluster> clusters){
 		double sum = 0.0;
@@ -52,7 +53,7 @@ public class KmeansUtil {
 		return sum/num;
 	}
 
-	public static List<Cluster> kmeansClass(List<Vector> inputs, int k, double convergenceDelta) {
+	public static ClusterClassifier kmeansClass(List<Vector> inputs, int k, double convergenceDelta) {
 		//System.out.println(inputs);
 		// double convergenceDelta = 0.001;
 		List<Cluster> clusters = Lists.newArrayList();
@@ -98,7 +99,7 @@ public class KmeansUtil {
 
 		}// while (iteration <= numIterations)
 
-		return clusters;
+		return classifier;
 	}
 
 	public static boolean isConverged(ClusterClassifier classifier) {

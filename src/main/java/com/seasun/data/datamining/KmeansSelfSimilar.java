@@ -21,6 +21,7 @@ import org.apache.commons.io.Charsets;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.mahout.clustering.Cluster;
+import org.apache.mahout.clustering.classify.ClusterClassifier;
 import org.apache.mahout.math.SequentialAccessSparseVector;
 import org.apache.mahout.math.Vector;
 
@@ -53,66 +54,75 @@ public class KmeansSelfSimilar {
 		LocalDate start = LocalDate.parse(Utils.getOrDefault("train_start", "2015-11-01"));
 		LocalDate end = LocalDate.parse(Utils.getOrDefault("train_end", "2015-11-01"));
 
-		// LocalDate evalStart =
-		// LocalDate.parse(Utils.getOrDefault("eval_start", "2015-11-01"));
-		// LocalDate evalEnd = LocalDate.parse(Utils.getOrDefault("eval_end",
-		// "2015-11-01"));
+		LocalDate evalStart = LocalDate.parse(Utils.getOrDefault("eval_start", "2015-11-01"));
+		LocalDate evalEnd = LocalDate.parse(Utils.getOrDefault("eval_end", "2015-11-01"));
 
 		// new code
 		// step1/3, load all of hive data to map, write to local file
 		// if exits local file, load to map
-		loadAllHiveData(start, end.plusDays(2 * TARGET_AFTTER_DAYS));
+		loadAllHiveData(start, evalEnd.plusDays(2 * TARGET_AFTTER_DAYS));
 
 		// step2/3, train data
 		Map<LocalDate, Map<String, Vector>> samples = mapTransfer(start, end, numFeatures, true);
 		out.println("train");
 		Map<LocalDate, Map<String, Integer>> accountTargetValue = getTargetValue(start, end, samples, false);
 		Map<Integer, List<Vector>> samplesClass = getClassValue(accountTargetValue, samples);
-		
-		String[] names = { "流失", "将流失", "留存" };
-		List<Double> delta = new ArrayList<>(9);
-		for (int i = 0; i <= 2; i++) {
-			List<Vector> inputs = samplesClass.get(i);
-			for(int k=2;k<10;k++){
-				List<Cluster> clusters = KmeansUtil.kmeansClass(inputs, k, 0.001);
-				delta.add(KmeansUtil.computeAvgRadius(clusters));
-			}
-			out.printf("%s 平均半径趋势: %s", names[i], delta);
-		}
-		
-//		int k = 4;
-//		if (args.length >= 1)
-//			k = Integer.parseInt(args[0]);
-//
-//		printKmeansRes(samplesClass, k);
+
+		// printKmeansRadiusChangeTrend(samplesClass);
+
+		int k = 3;
+		if (args.length >= 1)
+			k = Integer.parseInt(args[0]);
+
+		Map<Integer, ClusterClassifier> classifierMap = printKmeansRes(samplesClass, k);
+		eval3(accountTargetValue, samples, classifierMap);
+
+		// printKmeansRes(samplesClass, k);
 
 		// similarAnalysis(samplesClass);
 		// eval2(accountTargetValue, samples, samplesClass);
 
 		// step3/3, eval data
 		// eval 需要增加剔除过滤的逻辑
-		// out.println("eval");
-		// Map<LocalDate, Map<String, Vector>> evalSamples =
-		// mapTransfer(evalStart, evalEnd, numFeatures, true);
-		// Map<LocalDate, Map<String, Integer>> accountTargetValue2 =
-		// getTargetValue(evalStart, evalEnd, evalSamples,
-		// false);
+		out.println("eval");
+		Map<LocalDate, Map<String, Vector>> evalSamples =
+				mapTransfer(evalStart, evalEnd, numFeatures, true);
+		Map<LocalDate, Map<String, Integer>> accountTargetValue2 =
+				getTargetValue(evalStart, evalEnd, evalSamples,
+						false);
 		// eval2(accountTargetValue2, evalSamples, samplesClass);
+
+		eval3(accountTargetValue2, evalSamples, classifierMap);
 
 	}
 
-	public static void printKmeansRes(Map<Integer, List<Vector>> samplesClass, int k) {
-		Map<Integer, List<Cluster>> res = new HashMap<>();
+	// 打印出平均半径随着k的变化情况，以此来决定k值，（K=3）
+	public static void printKmeansRadiusChangeTrend(Map<Integer, List<Vector>> samplesClass) {
+		String[] names = { "流失", "将流失", "留存" };
 		for (int i = 0; i <= 2; i++) {
-			List<Cluster> clusters = KmeansUtil.kmeansClass(samplesClass.get(i), k, 0.001);
-			res.put(i, clusters);
-			out.printf("group %d, %d clusters: %s %n", i, k, clusters.toString());
+			List<Double> delta = new ArrayList<>(9);
+			List<Vector> inputs = samplesClass.get(i);
+			for (int k = 2; k < 10; k++) {
+				List<Cluster> clusters = KmeansUtil.kmeansClass(inputs, k, 0.001).getModels();
+				delta.add(KmeansUtil.computeAvgRadius(clusters));
+			}
+			out.printf("%s 平均半径趋势: %s", names[i], delta);
+		}
+	}
+
+	// 打印k均值的质心和半径
+	public static Map<Integer, ClusterClassifier> printKmeansRes(Map<Integer, List<Vector>> samplesClass, int k) {
+		Map<Integer, ClusterClassifier> res = new HashMap<>();
+		for (int i = 0; i <= 2; i++) {
+			ClusterClassifier classifier = KmeansUtil.kmeansClass(samplesClass.get(i), k, 0.001);
+			res.put(i, classifier);
+			out.printf("group %d, %d clusters: %s %n", i, k, classifier.getModels().toString());
 		}
 
 		String[] names = { "流失", "将流失", "留存" };
 		out.println("质心");
 		for (int i = 0; i <= 2; i++) {
-			List<Cluster> clusters = res.get(i);
+			List<Cluster> clusters = res.get(i).getModels();
 			for (Cluster c : clusters) {
 				out.printf("%s-%d", names[i], c.getNumObservations());
 				Vector center = c.getCenter();
@@ -122,10 +132,10 @@ public class KmeansSelfSimilar {
 				out.println("");
 			}
 		}
-		
+
 		out.println("半径");
 		for (int i = 0; i <= 2; i++) {
-			List<Cluster> clusters = res.get(i);
+			List<Cluster> clusters = res.get(i).getModels();
 			for (Cluster c : clusters) {
 				out.printf("%s-%d", names[i], c.getNumObservations());
 				Vector center = c.getRadius();
@@ -135,6 +145,8 @@ public class KmeansSelfSimilar {
 				out.println("");
 			}
 		}
+
+		return res;
 	}
 
 	public static void similarAnalysis(Map<Integer, List<Vector>> samplesClass) {
@@ -208,6 +220,47 @@ public class KmeansSelfSimilar {
 		return s;
 	}
 
+	// 使用kmeans分类
+	public static void eval3(Map<LocalDate, Map<String, Integer>> accountTargetValue
+			, Map<LocalDate, Map<String, Vector>> samples
+			, Map<Integer, ClusterClassifier> classifierMap) {
+
+		int sampleCnt = 0;
+		Integer[][] res = { { 0, 0, 0 }, { 0, 0, 0 }, { 0, 0, 0 } };// abcd;
+
+		for (Map.Entry<LocalDate, Map<String, Vector>> e : samples.entrySet()) {
+			LocalDate ld = e.getKey();
+			Map<String, Vector> map = e.getValue();
+			for (Map.Entry<String, Vector> eInner : map.entrySet()) {
+				String accountId = eInner.getKey();
+				Vector input = eInner.getValue();
+				int targetValue = accountTargetValue.get(ld).getOrDefault(accountId, 0);
+				if (targetValue < 0 || targetValue > 2)
+					continue;
+				
+				double max = 0.0;
+				int predictValue = 1;
+				for(int i=0;i<=2;i++){
+					Vector p = classifierMap.get(i).classify(input);
+					if(p.maxValue() > max){
+						max = p.maxValue();
+						predictValue = i;
+					}
+				}
+				
+				res[targetValue][predictValue]++;
+
+				if (SCORE_FREQ != 0 && (++sampleCnt) % SCORE_FREQ == 0) {
+					out.printf("account:%s, input:%s, target:%d, predict:%d %n"
+							, accountId, input.toString(), targetValue, predictValue);
+				}
+			}
+		}
+		
+		printResMatrix(res);
+	}
+
+	// 使用均值分类
 	public static void eval2(Map<LocalDate, Map<String, Integer>> accountTargetValue
 			, Map<LocalDate, Map<String, Vector>> samples
 			, Map<Integer, List<Vector>> samplesClass) {
@@ -257,6 +310,10 @@ public class KmeansSelfSimilar {
 			}
 		}
 
+		printResMatrix(res);
+	}
+
+	public static void printResMatrix(Integer[][] res) {
 		int all = 0;
 		for (int i = 0; i < 3; i++)
 			for (int j = 0; j < 3; j++)
@@ -500,18 +557,7 @@ public class KmeansSelfSimilar {
 			}
 		}
 
-		int all = 0;
-		for (int i = 0; i < 3; i++)
-			for (int j = 0; j < 3; j++)
-				all += res[i][j];
-
-		out.printf("result matrix all: %d %n", all);
-		for (int i = 0; i < 3; i++) {
-			for (int j = 0; j < 3; j++) {
-				out.printf("%2.4f \t", (double) res[i][j] / all);
-			}
-			out.printf("%n");
-		}
+		printResMatrix(res);
 
 	}
 
