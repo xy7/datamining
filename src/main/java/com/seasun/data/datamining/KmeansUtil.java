@@ -30,7 +30,7 @@ public class KmeansUtil {
 	}// main
 
 	public static List<Cluster> kmeansClass(List<Vector> inputs, int k, double convergenceDelta) {
-		System.out.println(inputs);
+		//System.out.println(inputs);
 		// double convergenceDelta = 0.001;
 		List<Cluster> clusters = Lists.newArrayList();
 		// KMeansUtil.configureWithClusterInfo(conf, clustersIn, clusters);
@@ -66,7 +66,8 @@ public class KmeansUtil {
 			// update the policy, here do nothing
 			classifier.getPolicy().update(classifier);
 
-			System.out.println("iteration:" + iteration + " Cluster:" + classifier.getModels());
+			if(iteration%20 == 0)
+				System.out.println("iteration:" + iteration + " Cluster:" + classifier.getModels());
 			iteration++;
 
 			if( isConverged(classifier) )
