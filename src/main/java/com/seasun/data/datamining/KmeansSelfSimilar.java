@@ -227,6 +227,19 @@ public class KmeansSelfSimilar {
 
 		int sampleCnt = 0;
 		Integer[][] res = { { 0, 0, 0 }, { 0, 0, 0 }, { 0, 0, 0 } };// abcd;
+		//标示分类数过少的聚簇
+		Map<Integer, Map<Integer, Integer>> flag = new HashMap<>();
+		for(int i=0;i<=2;i++)
+			flag.put(i, new HashMap<>());
+		for(int i=0;i<=2;i++){
+			ClusterClassifier cc = classifierMap.get(i);
+			List<Cluster> cs = cc.getModels();
+			int size = cs.size();
+			for(int j=0;j<size;j++){
+				if(cs.get(j).getNumObservations() < 0.5/size)
+					flag.get(i).put(j, 1);
+			}
+		}
 
 		for (Map.Entry<LocalDate, Map<String, Vector>> e : samples.entrySet()) {
 			LocalDate ld = e.getKey();
@@ -239,11 +252,16 @@ public class KmeansSelfSimilar {
 					continue;
 				
 				double max = 0.0;
-				int predictValue = 1;
+				int predictValue = -1;
 				for(int i=0;i<=2;i++){
 					Vector p = classifierMap.get(i).classify(input);
-					if(p.maxValue() > max){
+					while(p.maxValue() > max){
 						max = p.maxValue();
+						int maxIndex = p.maxValueIndex();
+						if(flag.get(i).containsKey(maxIndex)){
+							p.setQuick(maxIndex, 0);
+							continue;
+						}
 						predictValue = i;
 					}
 				}
