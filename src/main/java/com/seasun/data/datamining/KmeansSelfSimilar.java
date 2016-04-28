@@ -159,7 +159,7 @@ public class KmeansSelfSimilar {
 		int sampleCnt = 0;
 		Integer[][] res = { { 0, 0, 0 }, { 0, 0, 0 }, { 0, 0, 0 } };// abcd;
 		//标示分类数过少的聚簇
-		Map<Integer, Map<Integer, Integer>> flag = new HashMap<>();
+		Map<Integer, Map<Integer, Double>> flag = new HashMap<>();
 		for(int i=0;i<=2;i++)
 			flag.put(i, new HashMap<>());
 		for(int i=0;i<=2;i++){
@@ -171,8 +171,9 @@ public class KmeansSelfSimilar {
 				sum += cs.get(j).getNumObservations();
 			}
 			for(int j=0;j<size;j++){
-				if(cs.get(j).getNumObservations()/sum < 0.1/size)
-					flag.get(i).put(j, 1);
+				double rate = cs.get(j).getNumObservations()/sum;
+				if(rate < 0.1/size)
+					flag.get(i).put(j, rate);
 			}
 		}
 
@@ -188,8 +189,10 @@ public class KmeansSelfSimilar {
 				
 				double max = 0.0;
 				int predictValue = -1;
+				Map<Integer, Vector> temp = new HashMap<>();
 				for(int i=0;i<=2;i++){
 					Vector p = classifierMap.get(i).classify(input);
+					temp.put(i, p.clone());
 					while(p.maxValue() > max){
 //						if(p.norm(2) == 0){
 //							break;
@@ -207,7 +210,7 @@ public class KmeansSelfSimilar {
 				}
 				
 				if(predictValue == -1){
-					out.printf("input: %s, classifier: %s %n", input, classifierMap);
+					out.printf("input: %s, p:%s, flag: %s %n", input, temp,  flag);
 				}
 				
 				res[targetValue][predictValue]++;
