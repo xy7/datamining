@@ -256,13 +256,18 @@ public class KmeansSelfSimilar {
 				for(int i=0;i<=2;i++){
 					Vector p = classifierMap.get(i).classify(input);
 					while(p.maxValue() > max){
+						if(p.norm(2) == 0){
+							break;
+						}
 						max = p.maxValue();
 						int maxIndex = p.maxValueIndex();
 						if(flag.get(i).containsKey(maxIndex)){
 							p.setQuick(maxIndex, 0);
 							continue;
+						} else {
+							predictValue = i;
+							break;
 						}
-						predictValue = i;
 					}
 				}
 				
