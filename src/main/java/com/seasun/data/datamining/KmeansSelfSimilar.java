@@ -149,77 +149,6 @@ public class KmeansSelfSimilar {
 		return res;
 	}
 
-	public static void similarAnalysis(Map<Integer, List<Vector>> samplesClass) {
-
-		double[][] mins = new double[3][3];
-		double[][] avgs = new double[3][3];
-		double[][] maxs = new double[3][3];
-		for (int i = 0; i < 3; i++) {
-			for (int j = i; j < 3; j++) {
-				double[] res = vectorsCompare(samplesClass.get(i), samplesClass.get(j));
-				mins[i][j] = res[0];
-				avgs[i][j] = res[1];
-				maxs[i][j] = res[2];
-			}
-		}
-		out.println("mins:");
-		printArray(mins);
-		out.println("avgs:");
-		printArray(avgs);
-		out.println("maxs:");
-		printArray(maxs);
-	}
-
-	public static void printArray(double[][] mins) {
-		for (int i = 0; i < mins.length; i++) {
-			for (int j = 0; j < mins[0].length; j++) {
-				out.printf("%f\t", mins[i][j]);
-			}
-			out.printf("%n");
-		}
-	}
-
-	public static double[] vectorsCompare(List<Vector> listA, List<Vector> listB) {
-		double sA[] = compu(listA);
-		double sB[] = compu(listB);
-
-		double min = 1.0, avg = 0.0, max = 0.0;
-		int sizeA = listA.size();
-		int sizeB = listB.size();
-		int sizeAB = sizeA * sizeB;
-
-		for (int a = 0; a < sizeA; a++) {
-			Vector va = listA.get(a);
-			double sa = sA[a];
-			for (int b = 0; b < sizeB; b++) {
-				Vector vb = listB.get(b);
-				double sb = sB[b];
-				double sMax = sa + sb;
-				double similar = vectorSimilar(va, vb) / sMax;
-				avg += similar / sizeAB;
-				if (similar > max) {
-					max = similar;
-					out.printf("get max: %f, va:%s, vb:%s %n", max, va.toString(), vb.toString());
-				}
-				if (similar < min)
-					min = similar;
-			}
-		}
-		out.printf("min:%f, avg:%f, max:%f %n", min, avg, max);
-		double[] res = { min, avg, max };
-		return res;
-	}
-
-	public static double[] compu(List<Vector> list) {
-		int size = list.size();
-		double s[] = new double[size];
-		for (int a = 0; a < size; a++) {
-			Vector va = list.get(a);
-			s[a] = va.dot(va);
-		}
-		return s;
-	}
-
 	// 使用kmeans分类
 	public static void eval3(Map<LocalDate, Map<String, Integer>> accountTargetValue
 			, Map<LocalDate, Map<String, Vector>> samples
@@ -283,70 +212,20 @@ public class KmeansSelfSimilar {
 		printResMatrix(res);
 	}
 
-	// 使用均值分类
-	public static void eval2(Map<LocalDate, Map<String, Integer>> accountTargetValue
-			, Map<LocalDate, Map<String, Vector>> samples
-			, Map<Integer, List<Vector>> samplesClass) {
-
-		Map<Integer, Vector> avgSamplesClass = new HashMap<>(3);
-		for (Map.Entry<Integer, List<Vector>> e : samplesClass.entrySet()) {
-			Vector sum = new SequentialAccessSparseVector(numFeatures);
-			for (Vector v : e.getValue()) {
-				sum = sum.plus(v);
-			}
-			Vector avg = sum.divide(e.getValue().size());
-			avgSamplesClass.put(e.getKey(), avg);
-		}
-
-		out.printf("avgSamplesClass: %s %n", avgSamplesClass.toString());
-
-		int sampleCnt = 0;
-		Integer[][] res = { { 0, 0, 0 }, { 0, 0, 0 }, { 0, 0, 0 } };// abcd;
-
-		for (Map.Entry<LocalDate, Map<String, Vector>> e : samples.entrySet()) {
-			LocalDate ld = e.getKey();
-			Map<String, Vector> map = e.getValue();
-			for (Map.Entry<String, Vector> eInner : map.entrySet()) {
-				String accountId = eInner.getKey();
-				Vector input = eInner.getValue();
-				int targetValue = accountTargetValue.get(ld).getOrDefault(accountId, 0);
-				if (targetValue < 0 || targetValue > 2)
-					continue;
-				double[] sr = { 0.0, 0.0, 0.0 };// 平均相似度
-				for (int t = 0; t < 3; t++) {
-					sr[t] = vectorSimilar(input, avgSamplesClass.get(t));
-				}
-				int predictValue = 1;
-				if (sr[0] < sr[1] && sr[0] < sr[2])
-					predictValue = 0;
-				else if (sr[2] < sr[0] && sr[2] < sr[1])
-					predictValue = 2;
-
-				res[targetValue][predictValue]++;
-
-				if (SCORE_FREQ != 0 && (++sampleCnt) % SCORE_FREQ == 0) {
-					out.printf(
-							"account:%s, input:%s, target:%d, predict:%d, similar:%f\t%f\t%f %n"
-							, accountId, input.toString(), targetValue, predictValue
-							, sr[0], sr[1], sr[2]);
-				}
-			}
-		}
-
-		printResMatrix(res);
-	}
-
 	public static void printResMatrix(Integer[][] res) {
 		int all = 0;
 		for (int i = 0; i < 3; i++)
 			for (int j = 0; j < 3; j++)
 				all += res[i][j];
 
-		out.printf("result matrix all: %d %n", all);
+		out.printf("result matrix all: %d right rate: %2.4f %n", all, res[0][0]+res[1][1]+res[2][2]);
 		for (int i = 0; i < 3; i++) {
 			for (int j = 0; j < 3; j++) {
-				out.printf("%2.4f \t", (double) res[i][j] / all);
+				out.printf("%2.4f ", (double) res[i][j] / all);
 			}
+			out.printf("coverRate %2.4f hitRate %2.4f "
+					, res[i][i]/(res[i][0]+res[i][1]+res[i][2])
+					, res[i][i]/(res[0][i]+res[1][i]+res[2][i]));
 			out.printf("%n");
 		}
 	}
@@ -529,59 +408,6 @@ public class KmeansSelfSimilar {
 		return eval.minus(sample).norm(2);
 		// Vector diff = eval.minus(sample);
 		// return diff.dot(diff);
-	}
-
-	private static void eval(Map<LocalDate, Map<String, Integer>> accountTargetValue
-			, Map<LocalDate, Map<String, Vector>> samples
-			, Map<Integer, List<Vector>> samplesClass) {
-		out.println("eval start: ");
-		// Map<LocalDate, Map<String, Integer>> accountTargetValue =
-		// getTargetValue(start, end, samples);
-
-		int sampleCnt = 0;
-		Integer[][] res = { { 0, 0, 0 }, { 0, 0, 0 }, { 0, 0, 0 } };// abcd;
-
-		for (Map.Entry<LocalDate, Map<String, Vector>> e : samples.entrySet()) {
-			LocalDate ld = e.getKey();
-			Map<String, Vector> map = e.getValue();
-			for (Map.Entry<String, Vector> eInner : map.entrySet()) {
-				String accountId = eInner.getKey();
-				Vector input = eInner.getValue();
-				int targetValue = accountTargetValue.get(ld).getOrDefault(accountId, 0);
-				if (targetValue < 0 || targetValue > 2)
-					continue;
-
-				double[] similar = { 0.0, 0.0, 0.0 };// 绝对相似度
-				for (int i = 0; i <= 2; i++) {
-					for (Vector v : samplesClass.get(i)) {
-						similar[i] += vectorSimilar(input, v);
-					}
-				}
-
-				double[] sr = { 0.0, 0.0, 0.0 };// 平均相似度
-				for (int i = 0; i <= 2; i++)
-					sr[i] = similar[i] / samplesClass.get(i).size();
-
-				int predictValue = 1;
-				if (sr[0] < sr[1] && sr[0] < sr[2])
-					predictValue = 0;
-				else if (sr[2] < sr[0] && sr[2] < sr[1])
-					predictValue = 2;
-
-				res[targetValue][predictValue]++;
-
-				if (SCORE_FREQ != 0 && (++sampleCnt) % SCORE_FREQ == 0) {
-					out.printf(
-							"account:%s, input:%s, target:%d, predict:%d, similar:%f\t%f\t%f, avg similar:%f\t%f\t%f %n"
-							, accountId, input.toString(), targetValue, predictValue
-							, similar[0], similar[1], similar[2]
-							, sr[0], sr[1], sr[2]);
-				}
-			}
-		}
-
-		printResMatrix(res);
-
 	}
 
 	private static Map<Integer, List<Vector>> getClassValue(Map<LocalDate, Map<String, Integer>> accountTargetValue
