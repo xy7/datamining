@@ -73,7 +73,7 @@ public class KmeansSelfSimilar {
 
 		Map<Integer, List<Cluster>> res = new HashMap<>();
 		for (int i = 0; i <= 2; i++) {
-			List<Cluster> clusters = KmeansUtil.kmeansClass(samplesClass.get(i), 4, 0.001);
+			List<Cluster> clusters = KmeansUtil.kmeansClass(samplesClass.get(i), k, 0.001);
 			res.put(i, clusters);
 			out.printf("group %d, %d clusters: %s %n", i, k, clusters.toString());
 		}
