@@ -224,8 +224,8 @@ public class KmeansSelfSimilar {
 				out.printf("%2.4f ", (double) res[i][j] / all);
 			}
 			out.printf("coverRate %2.4f hitRate %2.4f "
-					, res[i][i]/(res[i][0]+res[i][1]+res[i][2])
-					, res[i][i]/(res[0][i]+res[1][i]+res[2][i]));
+					, (double)res[i][i]/(res[i][0]+res[i][1]+res[i][2])
+					, (double)res[i][i]/(res[0][i]+res[1][i]+res[2][i]));
 			out.printf("%n");
 		}
 	}
