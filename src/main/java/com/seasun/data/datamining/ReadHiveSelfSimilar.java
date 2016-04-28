@@ -573,7 +573,7 @@ public class ReadHiveSelfSimilar {
 					targetClass.put(accountId, 0);
 					rowstat[2]++;
 				} else {
-					Vector v = eInner.getValue();
+					Vector v = target.get(accountId);
 					int nextHalfLoginDaycnt = 0;
 					for (int i = 0; i < TARGET_AFTTER_DAYS / 2; i++) {
 						if (v.get(i) > LOST_THRESHOLD) {
