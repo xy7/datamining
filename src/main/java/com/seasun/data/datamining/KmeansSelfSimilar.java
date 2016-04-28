@@ -222,26 +222,10 @@ public class KmeansSelfSimilar {
 			}
 		}
 		
-		printResMatrix(res);
+		Utils.printResMatrix(res);
 	}
 
-	public static void printResMatrix(Integer[][] res) {
-		int all = 0;
-		for (int i = 0; i < 3; i++)
-			for (int j = 0; j < 3; j++)
-				all += res[i][j];
-
-		out.printf("result matrix all: %d right rate: %2.4f %n", all, (double)(res[0][0]+res[1][1]+res[2][2])/all);
-		for (int i = 0; i < 3; i++) {
-			for (int j = 0; j < 3; j++) {
-				out.printf("%2.4f ", (double) res[i][j] / all);
-			}
-			out.printf("coverRate %2.4f hitRate %2.4f "
-					, (double)res[i][i]/(res[i][0]+res[i][1]+res[i][2])
-					, (double)res[i][i]/(res[0][i]+res[1][i]+res[2][i]));
-			out.printf("%n");
-		}
-	}
+	
 
 	public static Map<LocalDate, Map<String, Vector>> mapTransfer(LocalDate start, LocalDate end
 			, int numFeatures, boolean filter) {

@@ -196,18 +196,7 @@ public class ReadHiveSelfSimilar {
 			}
 		}
 		
-		int all = 0;
-		for (int i = 0; i < 3; i++)
-			for (int j = 0; j < 3; j++)
-				all += res[i][j];
-
-		out.printf("result matrix all: %d %n", all);
-		for (int i = 0; i < 3; i++) {
-			for (int j = 0; j < 3; j++) {
-				out.printf("%2.4f \t", (double) res[i][j] / all);
-			}
-			out.printf("%n");
-		}
+		Utils.printResMatrix(res);
 	}
 
 	public static Map<LocalDate, Map<String, Vector>> mapTransfer(LocalDate start, LocalDate end
