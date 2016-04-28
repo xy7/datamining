@@ -86,7 +86,7 @@ public class KmeansSelfSimilar {
 				out.printf("%s-%d", names[i], c.getNumObservations());
 				Vector center = c.getCenter();
 				for (int j = 0; j < center.size(); j++) {
-					out.printf("\t%f", center.get(j));
+					out.printf(",%f", center.get(j));
 				}
 				out.println("");
 			}
@@ -99,7 +99,7 @@ public class KmeansSelfSimilar {
 				out.printf("%s-%d", names[i], c.getNumObservations());
 				Vector center = c.getRadius();
 				for (int j = 0; j < center.size(); j++) {
-					out.printf("\t%f", center.get(j));
+					out.printf(",%f", center.get(j));
 				}
 				out.println("");
 			}
