@@ -194,12 +194,13 @@ public class KmeansSelfSimilar {
 						if(p.norm(2) == 0){
 							break;
 						}
-						max = p.maxValue();
+						
 						int maxIndex = p.maxValueIndex();
 						if(flag.get(i).containsKey(maxIndex)){
 							p.setQuick(maxIndex, 0);
 							continue;
 						} else {
+							max = p.maxValue();
 							predictValue = i;
 							break;
 						}
