@@ -74,9 +74,10 @@ public class KmeansSelfSimilar {
 		if (args.length >= 1)
 			k = Integer.parseInt(args[0]);
 
-		Map<Integer, ClusterClassifier> classifierMap = printKmeansRes(samplesClass, k);
-		eval3(accountTargetValue, samples, classifierMap);
-
+		for(k=2;k<7;k++){
+			Map<Integer, ClusterClassifier> classifierMap = printKmeansRes(samplesClass, k);
+			eval3(accountTargetValue, samples, classifierMap);
+		}
 		// printKmeansRes(samplesClass, k);
 
 		// similarAnalysis(samplesClass);
@@ -84,6 +85,7 @@ public class KmeansSelfSimilar {
 
 		// step3/3, eval data
 		// eval 需要增加剔除过滤的逻辑
+		/*
 		out.println("eval");
 		Map<LocalDate, Map<String, Vector>> evalSamples =
 				mapTransfer(evalStart, evalEnd, numFeatures, true);
@@ -92,7 +94,7 @@ public class KmeansSelfSimilar {
 						false);
 		// eval2(accountTargetValue2, evalSamples, samplesClass);
 
-		eval3(accountTargetValue2, evalSamples, classifierMap);
+		eval3(accountTargetValue2, evalSamples, classifierMap);*/
 
 	}
 
@@ -164,8 +166,12 @@ public class KmeansSelfSimilar {
 			ClusterClassifier cc = classifierMap.get(i);
 			List<Cluster> cs = cc.getModels();
 			int size = cs.size();
+			int sum = 0;
 			for(int j=0;j<size;j++){
-				if(cs.get(j).getNumObservations() < 0.5/size)
+				sum += cs.get(j).getNumObservations();
+			}
+			for(int j=0;j<size;j++){
+				if(cs.get(j).getNumObservations()/sum < 0.5/size)
 					flag.get(i).put(j, 1);
 			}
 		}
