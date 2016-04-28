@@ -52,8 +52,10 @@ public class KmeansSelfSimilar {
 		LocalDate start = LocalDate.parse(Utils.getOrDefault("train_start", "2015-11-01"));
 		LocalDate end = LocalDate.parse(Utils.getOrDefault("train_end", "2015-11-01"));
 
-//		LocalDate evalStart = LocalDate.parse(Utils.getOrDefault("eval_start", "2015-11-01"));
-//		LocalDate evalEnd = LocalDate.parse(Utils.getOrDefault("eval_end", "2015-11-01"));
+		// LocalDate evalStart =
+		// LocalDate.parse(Utils.getOrDefault("eval_start", "2015-11-01"));
+		// LocalDate evalEnd = LocalDate.parse(Utils.getOrDefault("eval_end",
+		// "2015-11-01"));
 
 		// new code
 		// step1/3, load all of hive data to map, write to local file
@@ -66,22 +68,55 @@ public class KmeansSelfSimilar {
 		Map<LocalDate, Map<String, Integer>> accountTargetValue = getTargetValue(start, end, samples, false);
 		Map<Integer, List<Vector>> samplesClass = getClassValue(accountTargetValue, samples);
 		int k = 4;
-		if(args.length >= 1)
+		if (args.length >= 1)
 			k = Integer.parseInt(args[0]);
-		for(int i=0;i<=2;i++){
+
+		Map<Integer, List<Cluster>> res = new HashMap<>();
+		for (int i = 0; i <= 2; i++) {
 			List<Cluster> clusters = KmeansUtil.kmeansClass(samplesClass.get(i), 4, 0.001);
+			res.put(i, clusters);
 			out.printf("group %d, %d clusters: %s %n", i, k, clusters.toString());
 		}
+
+		String[] names = { "流失", "将流失", "留存" };
+		out.println("质心");
+		for (int i = 0; i <= 2; i++) {
+			List<Cluster> clusters = res.get(i);
+			for (Cluster c : clusters) {
+				out.printf("%s-%d", names[i], c.getNumObservations());
+				Vector center = c.getCenter();
+				for (int j = 0; j < center.size(); j++) {
+					out.printf("\t%f", center.get(j));
+				}
+				out.println("");
+			}
+		}
+		
+		out.println("半径");
+		for (int i = 0; i <= 2; i++) {
+			List<Cluster> clusters = res.get(i);
+			for (Cluster c : clusters) {
+				out.printf("%s-%d", names[i], c.getNumObservations());
+				Vector center = c.getRadius();
+				for (int j = 0; j < center.size(); j++) {
+					out.printf("\t%f", center.get(j));
+				}
+				out.println("");
+			}
+		}
+
 		// similarAnalysis(samplesClass);
-		//eval2(accountTargetValue, samples, samplesClass);
+		// eval2(accountTargetValue, samples, samplesClass);
 
 		// step3/3, eval data
 		// eval 需要增加剔除过滤的逻辑
-//		out.println("eval");
-//		Map<LocalDate, Map<String, Vector>> evalSamples = mapTransfer(evalStart, evalEnd, numFeatures, true);
-//		Map<LocalDate, Map<String, Integer>> accountTargetValue2 = getTargetValue(evalStart, evalEnd, evalSamples,
-//				false);
-//		eval2(accountTargetValue2, evalSamples, samplesClass);
+		// out.println("eval");
+		// Map<LocalDate, Map<String, Vector>> evalSamples =
+		// mapTransfer(evalStart, evalEnd, numFeatures, true);
+		// Map<LocalDate, Map<String, Integer>> accountTargetValue2 =
+		// getTargetValue(evalStart, evalEnd, evalSamples,
+		// false);
+		// eval2(accountTargetValue2, evalSamples, samplesClass);
 
 	}
 
