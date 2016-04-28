@@ -171,7 +171,7 @@ public class KmeansSelfSimilar {
 				sum += cs.get(j).getNumObservations();
 			}
 			for(int j=0;j<size;j++){
-				if(cs.get(j).getNumObservations()/sum < 0.5/size)
+				if(cs.get(j).getNumObservations()/sum < 0.1/size)
 					flag.get(i).put(j, 1);
 			}
 		}
@@ -191,10 +191,9 @@ public class KmeansSelfSimilar {
 				for(int i=0;i<=2;i++){
 					Vector p = classifierMap.get(i).classify(input);
 					while(p.maxValue() > max){
-						if(p.norm(2) == 0){
-							break;
-						}
-						
+//						if(p.norm(2) == 0){
+//							break;
+//						}
 						int maxIndex = p.maxValueIndex();
 						if(flag.get(i).containsKey(maxIndex)){
 							p.setQuick(maxIndex, 0);
@@ -205,6 +204,10 @@ public class KmeansSelfSimilar {
 							break;
 						}
 					}
+				}
+				
+				if(predictValue == -1){
+					out.printf("input: %s, classifier: %s %n", input, classifierMap);
 				}
 				
 				res[targetValue][predictValue]++;
