@@ -10,6 +10,7 @@ import java.io.ObjectOutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -67,10 +68,40 @@ public class KmeansSelfSimilar {
 		out.println("train");
 		Map<LocalDate, Map<String, Integer>> accountTargetValue = getTargetValue(start, end, samples, false);
 		Map<Integer, List<Vector>> samplesClass = getClassValue(accountTargetValue, samples);
-		int k = 4;
-		if (args.length >= 1)
-			k = Integer.parseInt(args[0]);
+		
+		String[] names = { "流失", "将流失", "留存" };
+		List<Double> delta = new ArrayList<>(9);
+		for (int i = 0; i <= 2; i++) {
+			List<Vector> inputs = samplesClass.get(i);
+			for(int k=2;k<10;k++){
+				List<Cluster> clusters = KmeansUtil.kmeansClass(inputs, k, 0.001);
+				delta.add(KmeansUtil.computeAvgRadius(clusters));
+			}
+			out.printf("%s 平均半径趋势: %s", names[i], delta);
+		}
+		
+//		int k = 4;
+//		if (args.length >= 1)
+//			k = Integer.parseInt(args[0]);
+//
+//		printKmeansRes(samplesClass, k);
 
+		// similarAnalysis(samplesClass);
+		// eval2(accountTargetValue, samples, samplesClass);
+
+		// step3/3, eval data
+		// eval 需要增加剔除过滤的逻辑
+		// out.println("eval");
+		// Map<LocalDate, Map<String, Vector>> evalSamples =
+		// mapTransfer(evalStart, evalEnd, numFeatures, true);
+		// Map<LocalDate, Map<String, Integer>> accountTargetValue2 =
+		// getTargetValue(evalStart, evalEnd, evalSamples,
+		// false);
+		// eval2(accountTargetValue2, evalSamples, samplesClass);
+
+	}
+
+	public static void printKmeansRes(Map<Integer, List<Vector>> samplesClass, int k) {
 		Map<Integer, List<Cluster>> res = new HashMap<>();
 		for (int i = 0; i <= 2; i++) {
 			List<Cluster> clusters = KmeansUtil.kmeansClass(samplesClass.get(i), k, 0.001);
@@ -104,20 +135,6 @@ public class KmeansSelfSimilar {
 				out.println("");
 			}
 		}
-
-		// similarAnalysis(samplesClass);
-		// eval2(accountTargetValue, samples, samplesClass);
-
-		// step3/3, eval data
-		// eval 需要增加剔除过滤的逻辑
-		// out.println("eval");
-		// Map<LocalDate, Map<String, Vector>> evalSamples =
-		// mapTransfer(evalStart, evalEnd, numFeatures, true);
-		// Map<LocalDate, Map<String, Integer>> accountTargetValue2 =
-		// getTargetValue(evalStart, evalEnd, evalSamples,
-		// false);
-		// eval2(accountTargetValue2, evalSamples, samplesClass);
-
 	}
 
 	public static void similarAnalysis(Map<Integer, List<Vector>> samplesClass) {
