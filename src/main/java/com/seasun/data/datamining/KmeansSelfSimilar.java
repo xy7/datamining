@@ -218,7 +218,7 @@ public class KmeansSelfSimilar {
 			for (int j = 0; j < 3; j++)
 				all += res[i][j];
 
-		out.printf("result matrix all: %d right rate: %2.4f %n", all, res[0][0]+res[1][1]+res[2][2]);
+		out.printf("result matrix all: %d right rate: %2.4f %n", all, (double)(res[0][0]+res[1][1]+res[2][2])/all);
 		for (int i = 0; i < 3; i++) {
 			for (int j = 0; j < 3; j++) {
 				out.printf("%2.4f ", (double) res[i][j] / all);
