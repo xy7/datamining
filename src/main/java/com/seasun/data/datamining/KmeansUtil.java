@@ -90,8 +90,8 @@ public class KmeansUtil {
 			// update the policy, here do nothing
 			classifier.getPolicy().update(classifier);
 
-			if(iteration%20 == 0)
-				System.out.println("iteration:" + iteration + " Cluster:" + classifier.getModels());
+//			if(iteration%20 == 0)
+//				System.out.println("iteration:" + iteration + " Cluster:" + classifier.getModels());
 			iteration++;
 
 			if( isConverged(classifier) )
