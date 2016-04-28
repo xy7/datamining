@@ -70,7 +70,7 @@ public class KmeansSelfSimilar {
 			k = Integer.parseInt(args[0]);
 		for(int i=0;i<=2;i++){
 			List<Cluster> clusters = KmeansUtil.kmeansClass(samplesClass.get(i), 4, 0.001);
-			out.printf("group %d, %d clusters: %s %n", k, i, clusters.toString());
+			out.printf("group %d, %d clusters: %s %n", i, k, clusters.toString());
 		}
 		// similarAnalysis(samplesClass);
 		//eval2(accountTargetValue, samples, samplesClass);
