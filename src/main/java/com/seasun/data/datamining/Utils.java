@@ -347,7 +347,12 @@ public class Utils {
 			for (int j = 0; j < 3; j++)
 				all += res[i][j];
 
-		out.printf("result matrix all: %d right rate: %2.4f %n", all, (double)(res[0][0]+res[1][1]+res[2][2])/all);
+		out.printf("result matrix all: %d, 0:%d, 1: %d, 2: %d, right rate: %2.4f %n"
+				, all
+				, res[0][0] + res[0][1] + res[0][2]
+				, res[1][0] + res[1][1] + res[1][2]
+				, res[2][0] + res[2][1] + res[2][2]
+				, (double)(res[0][0]+res[1][1]+res[2][2])/all);
 		for (int i = 0; i < 3; i++) {
 			for (int j = 0; j < 3; j++) {
 				out.printf("%2.4f ", (double) res[i][j] / all);

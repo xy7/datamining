@@ -29,6 +29,8 @@ import org.apache.mahout.math.Vector;
  * 根据空间自相似来预测
  */
 public class KmeansSelfSimilar {
+	private static double RARE_THRESHOLD = 0.1;
+
 	private static int TARGET_AFTTER_DAYS = 14;
 
 	private static String APPID = "100001";
@@ -50,6 +52,7 @@ public class KmeansSelfSimilar {
 		TARGET_AFTTER_DAYS = Utils.getOrDefault("target_after_days", 14);
 		numFeatures = Utils.getOrDefault("num_features", 14);
 		LOST_THRESHOLD = Utils.getOrDefault("lost_threshold", 1.0);
+		RARE_THRESHOLD = Utils.getOrDefault("rare_threshold", 0.1);
 
 		LocalDate start = LocalDate.parse(Utils.getOrDefault("train_start", "2015-11-01"));
 		LocalDate end = LocalDate.parse(Utils.getOrDefault("train_end", "2015-11-01"));
@@ -60,7 +63,7 @@ public class KmeansSelfSimilar {
 		// new code
 		// step1/3, load all of hive data to map, write to local file
 		// if exits local file, load to map
-		loadAllHiveData(start, end.plusDays(numFeatures + TARGET_AFTTER_DAYS - 1));
+		loadAllHiveData(start, evalEnd.plusDays(numFeatures + TARGET_AFTTER_DAYS - 1));
 
 		// step2/3, train data
 		Map<LocalDate, Map<String, Vector>> samples = mapTransfer(start, end, numFeatures, true);
@@ -74,10 +77,10 @@ public class KmeansSelfSimilar {
 		if (args.length >= 1)
 			k = Integer.parseInt(args[0]);
 
-		for(k=1;k<10;k++){
+		//for(k=1;k<10;k++){
 			Map<Integer, ClusterClassifier> classifierMap = printKmeansRes(samplesClass, k);
 			eval3(accountTargetValue, samples, classifierMap);
-		}
+		//}
 		// printKmeansRes(samplesClass, k);
 
 		// similarAnalysis(samplesClass);
@@ -85,7 +88,7 @@ public class KmeansSelfSimilar {
 
 		// step3/3, eval data
 		// eval 需要增加剔除过滤的逻辑
-		/*
+		
 		out.println("eval");
 		Map<LocalDate, Map<String, Vector>> evalSamples =
 				mapTransfer(evalStart, evalEnd, numFeatures, true);
@@ -94,7 +97,7 @@ public class KmeansSelfSimilar {
 						false);
 		// eval2(accountTargetValue2, evalSamples, samplesClass);
 
-		eval3(accountTargetValue2, evalSamples, classifierMap);*/
+		eval3(accountTargetValue2, evalSamples, classifierMap);
 
 	}
 
@@ -172,7 +175,7 @@ public class KmeansSelfSimilar {
 			}
 			for(int j=0;j<size;j++){
 				double rate = (double)cs.get(j).getNumObservations()/sum;
-				if(rate < 0.1/size)
+				if(rate < RARE_THRESHOLD/size)
 					flag.get(i).put(j, rate);
 			}
 		}
