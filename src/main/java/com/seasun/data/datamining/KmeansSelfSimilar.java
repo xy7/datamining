@@ -1,5 +1,6 @@
 package com.seasun.data.datamining;
 
+import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -70,6 +71,11 @@ public class KmeansSelfSimilar {
 		out.println("train");
 		Map<LocalDate, Map<String, Integer>> accountTargetValue = getTargetValue(start, end, samples, false);
 		Map<Integer, List<Vector>> samplesClass = getClassValue(accountTargetValue, samples);
+		
+		if(args.length >= 1 && args[0].equalsIgnoreCase("save")){
+			saveSamples(samplesClass);
+			return;
+		}
 
 		// printKmeansRadiusChangeTrend(samplesClass);
 
@@ -99,6 +105,25 @@ public class KmeansSelfSimilar {
 
 		eval3(accountTargetValue2, evalSamples, classifierMap);
 
+	}
+
+	public static void saveSamples(Map<Integer, List<Vector>> samplesClass) throws FileNotFoundException, IOException {
+		for(int i=0;i<=2;i++){
+			List<Vector> list = samplesClass.get(i);
+			File file = new File("./samples_" + i +".txt");
+			
+			FileOutputStream fos = new FileOutputStream(file);
+			DataOutputStream dos = new DataOutputStream(fos);
+			for(Vector v:list){
+				for(int index=0;index<numFeatures;index++){
+					dos.writeDouble(v.get(index));
+					dos.writeChars(" ");
+				}
+				dos.writeChars("\n");
+			}
+			
+			dos.close();
+		}
 	}
 
 	// 打印出平均半径随着k的变化情况，以此来决定k值，（K=3）
