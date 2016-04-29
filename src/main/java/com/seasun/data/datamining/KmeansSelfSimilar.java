@@ -114,7 +114,7 @@ public class KmeansSelfSimilar {
 			List<Vector> list = samplesClass.get(i);
 			File file = new File("./samples_" + i +".txt");
 
-			DataOutputStream dos = new DataOutputStream(new BufferedOutputStream(new FileOutputStream(file),1024 * 16));
+			BufferedOutputStream dos =new BufferedOutputStream(new FileOutputStream(file),1024 * 16);
 			for(Vector v:list){
 				StringBuilder sb = new StringBuilder();
 				boolean isFirst = true;
@@ -128,7 +128,7 @@ public class KmeansSelfSimilar {
 					
 				}
 				sb.append("\n");
-				dos.writeUTF(sb.toString());
+				dos.write(sb.toString().getBytes());
 			}
 			dos.flush();
 			dos.close();
