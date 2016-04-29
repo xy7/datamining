@@ -74,7 +74,7 @@ public class KmeansSelfSimilar {
 		if (args.length >= 1)
 			k = Integer.parseInt(args[0]);
 
-		for(k=2;k<7;k++){
+		for(k=1;k<10;k++){
 			Map<Integer, ClusterClassifier> classifierMap = printKmeansRes(samplesClass, k);
 			eval3(accountTargetValue, samples, classifierMap);
 		}
