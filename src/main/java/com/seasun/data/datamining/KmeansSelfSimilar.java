@@ -116,10 +116,10 @@ public class KmeansSelfSimilar {
 			DataOutputStream dos = new DataOutputStream(fos);
 			for(Vector v:list){
 				for(int index=0;index<numFeatures;index++){
-					dos.writeDouble(v.get(index));
-					dos.writeChars(" ");
+					dos.write((int)v.get(index));
+					dos.write(" ".getBytes());
 				}
-				dos.writeChars("\n");
+				dos.write("\n".getBytes());
 			}
 			
 			dos.close();
