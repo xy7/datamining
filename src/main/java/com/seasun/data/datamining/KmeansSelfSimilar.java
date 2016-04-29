@@ -116,11 +116,19 @@ public class KmeansSelfSimilar {
 
 			DataOutputStream dos = new DataOutputStream(new BufferedOutputStream(new FileOutputStream(file),1024 * 16));
 			for(Vector v:list){
+				StringBuilder sb = new StringBuilder();
+				boolean isFirst = true;
 				for(int index=0;index<numFeatures;index++){
-					dos.writeUTF(v.get(index)+"");
-					dos.writeUTF(" ");
+					if(isFirst){
+						isFirst = false;
+					} else{
+						sb.append(" ");
+					}
+					sb.append(v.get(i));
+					
 				}
-				dos.writeUTF("\n");
+				sb.append("\n");
+				dos.writeUTF(sb.toString());
 			}
 			dos.flush();
 			dos.close();
