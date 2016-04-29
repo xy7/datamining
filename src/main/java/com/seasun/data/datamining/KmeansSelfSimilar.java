@@ -124,7 +124,7 @@ public class KmeansSelfSimilar {
 					} else{
 						sb.append(" ");
 					}
-					sb.append(v.get(i));
+					sb.append(v.get(index));
 					
 				}
 				sb.append("\n");
