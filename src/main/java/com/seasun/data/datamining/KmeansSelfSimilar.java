@@ -1,5 +1,6 @@
 package com.seasun.data.datamining;
 
+import java.io.BufferedOutputStream;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -112,9 +113,8 @@ public class KmeansSelfSimilar {
 			out.println("save to txt file: " + i);
 			List<Vector> list = samplesClass.get(i);
 			File file = new File("./samples_" + i +".txt");
-			
-			FileOutputStream fos = new FileOutputStream(file);
-			DataOutputStream dos = new DataOutputStream(fos);
+
+			DataOutputStream dos = new DataOutputStream(new BufferedOutputStream(new FileOutputStream(file),1024 * 16));
 			for(Vector v:list){
 				for(int index=0;index<numFeatures;index++){
 					dos.write((int)v.get(index));
@@ -122,7 +122,7 @@ public class KmeansSelfSimilar {
 				}
 				dos.write("\n".getBytes());
 			}
-			
+			dos.flush();
 			dos.close();
 		}
 	}
