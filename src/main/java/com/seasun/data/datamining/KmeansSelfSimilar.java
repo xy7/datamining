@@ -118,7 +118,7 @@ public class KmeansSelfSimilar {
 		for (int i = 0; i <= 2; i++) {
 			ClusterClassifier classifier = KmeansUtil.kmeansClass(samplesClass.get(i), k, 0.001);
 			res.put(i, classifier);
-			out.printf("group %d, %d clusters: %s %n", i, k, classifier.getModels().toString());
+			//out.printf("group %d, %d clusters: %s %n", i, k, classifier.getModels().toString());
 		}
 
 		String[] names = { "流失", "将流失", "留存" };
