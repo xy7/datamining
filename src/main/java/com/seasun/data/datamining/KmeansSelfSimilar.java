@@ -109,6 +109,7 @@ public class KmeansSelfSimilar {
 
 	public static void saveSamples(Map<Integer, List<Vector>> samplesClass) throws FileNotFoundException, IOException {
 		for(int i=0;i<=2;i++){
+			out.println("save to txt file: " + i);
 			List<Vector> list = samplesClass.get(i);
 			File file = new File("./samples_" + i +".txt");
 			
