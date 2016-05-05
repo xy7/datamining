@@ -134,7 +134,7 @@ public class ReadHiveSelfSimilar {
 
 		Auc collector = new Auc();
 		Integer[] res = {0, 0, 0, 0};//abcd;
-		Integer[][] mayRes = new Integer[3][3];
+		int[][] mayRes = new int[3][3];
 		for(Map.Entry<LocalDate, Map<String, Vector>> e: samples.entrySet()){
 			LocalDate ld = e.getKey();
 	
