@@ -82,11 +82,10 @@ public class ReadHiveSelfSimilar {
 		evalLR(lr, samples, accountTargetValue);
 
 		// step3/3, eval data
-		// eval 需要增加剔除过滤的逻辑
-//		out.println("eval");
-//		Map<LocalDate, Map<String, Vector>> evalSamples = mapTransfer(evalStart, evalEnd, numFeatures, true);
-//		Map<LocalDate, Map<String, Integer>> accountTargetValue2 = getTargetValue(evalStart, evalEnd, evalSamples, false);
-//		eval(accountTargetValue2, evalSamples, samplesClass);
+		out.println("eval");
+		Map<LocalDate, Map<String, Vector>> evalSamples = mapTransfer(evalStart, evalEnd, numFeatures, true);
+		Map<LocalDate, Map<String, Integer>> accountTargetValue2 = getTargetValue(evalStart, evalEnd, evalSamples, false);
+		evalLR(lr, evalSamples, accountTargetValue2);
 
 	}
 	
