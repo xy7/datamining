@@ -165,12 +165,8 @@ public class ReadHiveSelfSimilar {
 				if (SCORE_FREQ != 0 && (++sampleCnt) % SCORE_FREQ == 0) {
 					// check performance while this is still news
 					double logP = lr.logLikelihood(targetValue, input);
-					Vector vec = lr.classify(input);
-					double p;
-					if (targetValue >= 1)
-						p = vec.get(targetValue - 1);
-					else
-						p = 1 - vec.get(0) - vec.get(1);
+	
+					double p = lr.classifyScalar(input);
 					out.printf(Locale.ENGLISH, "sampleCnt: %d   %2d  %1.4f %n",
 							sampleCnt, targetValue, p );
 				}
