@@ -324,7 +324,7 @@ public class ReadHiveSelfSimilar {
 						if (ldCur.isAfter(end))// 超过end日期向量不全，舍弃
 							break;
 						Map<String, Vector> accountVec = ldAccountVec.getOrDefault(ldCur, new HashMap<>());
-						Vector v = accountVec.getOrDefault(accountId, new SequentialAccessSparseVector(numFeatures));
+						Vector v = accountVec.getOrDefault(accountId, new SequentialAccessSparseVector(2 + names.length*numFeatures));
 						v.set(0, 1);
 						v.set(1, roleLevel);
 						int index = Utils.dateDiff(ld, ldCur);
