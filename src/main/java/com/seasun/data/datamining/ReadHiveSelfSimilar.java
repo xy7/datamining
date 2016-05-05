@@ -14,11 +14,16 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 import org.apache.commons.io.Charsets;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.mahout.classifier.evaluation.Auc;
+import org.apache.mahout.classifier.sgd.L1;
+import org.apache.mahout.classifier.sgd.OnlineLogisticRegression;
+import org.apache.mahout.math.RandomAccessSparseVector;
 import org.apache.mahout.math.SequentialAccessSparseVector;
 import org.apache.mahout.math.Vector;
 
@@ -37,6 +42,8 @@ public class ReadHiveSelfSimilar {
 	private static double LOST_THRESHOLD = 1.0;
 
 	public static Map<LocalDate, Map<String, Map<String, Integer>>> ldAccountMaps = new HashMap<>();
+	
+	private static final String[] names = {"online_dur", "login_cnt", "recharge_cnt", "recharge" };
 
 	public static void main(String[] args) throws Exception {
 
@@ -47,12 +54,18 @@ public class ReadHiveSelfSimilar {
 		TARGET_AFTTER_DAYS = Utils.getOrDefault("target_after_days", 14);
 		numFeatures = Utils.getOrDefault("num_features", 14);
 		LOST_THRESHOLD = Utils.getOrDefault("lost_threshold", 1.0);
+		
+		OnlineLogisticRegression lr;
+		lr = new OnlineLogisticRegression(2, 2 + names.length*numFeatures, new L1());
+		lr.lambda(1e-4);// 先验分布的加权因子
+		lr.learningRate(1e-1);// 1e-3
+		lr.alpha(1 - 1.0e-5);// 学习率的指数衰减率,步长
 
 		LocalDate start = LocalDate.parse(Utils.getOrDefault("train_start", "2015-11-01"));
 		LocalDate end = LocalDate.parse(Utils.getOrDefault("train_end", "2015-11-01"));
 
-		 LocalDate evalStart = LocalDate.parse(Utils.getOrDefault("eval_start", "2015-11-01"));
-		 LocalDate evalEnd = LocalDate.parse(Utils.getOrDefault("eval_end", "2015-11-01"));
+		LocalDate evalStart = LocalDate.parse(Utils.getOrDefault("eval_start", "2015-11-01"));
+		LocalDate evalEnd = LocalDate.parse(Utils.getOrDefault("eval_end", "2015-11-01"));
 
 		// new code
 		// step1/3, load all of hive data to map, write to local file
@@ -64,16 +77,91 @@ public class ReadHiveSelfSimilar {
 		out.println("train");
 		Map<LocalDate, Map<String, Integer>> accountTargetValue = getTargetValue(start, end, samples, false);
 		Map<Integer, List<Vector>> samplesClass = getClassValue(accountTargetValue, samples);
+		train(lr, samples, accountTargetValue);
 //		similarAnalysis(samplesClass);
-		eval(accountTargetValue, samples, samplesClass);
+		evalLR(lr, samples, accountTargetValue);
 
 		// step3/3, eval data
 		// eval 需要增加剔除过滤的逻辑
-		out.println("eval");
-		Map<LocalDate, Map<String, Vector>> evalSamples = mapTransfer(evalStart, evalEnd, numFeatures, true);
-		Map<LocalDate, Map<String, Integer>> accountTargetValue2 = getTargetValue(evalStart, evalEnd, evalSamples, false);
-		eval(accountTargetValue2, evalSamples, samplesClass);
+//		out.println("eval");
+//		Map<LocalDate, Map<String, Vector>> evalSamples = mapTransfer(evalStart, evalEnd, numFeatures, true);
+//		Map<LocalDate, Map<String, Integer>> accountTargetValue2 = getTargetValue(evalStart, evalEnd, evalSamples, false);
+//		eval(accountTargetValue2, evalSamples, samplesClass);
 
+	}
+	
+	private static void train(OnlineLogisticRegression lr
+			, Map<LocalDate, Map<String, Vector>> samples
+			, Map<LocalDate, Map<String, Integer>> accountTargetValue){
+		out.println("train: ");
+		
+		for(Map.Entry<LocalDate, Map<String, Vector>> e: samples.entrySet()){
+			LocalDate ld = e.getKey();
+	
+			for(Map.Entry<String, Vector> eInner:e.getValue().entrySet()){
+				String accountId = eInner.getKey();
+				Vector input = eInner.getValue();
+				int targetValue = accountTargetValue.get(ld).getOrDefault(accountId, 0);
+				lr.train(targetValue == 2? 1:0, input);
+			}
+		}
+	}
+	
+	private static void evalLR(OnlineLogisticRegression lr
+			, Map<LocalDate, Map<String, Vector>> samples
+			, Map<LocalDate, Map<String, Integer>> accountTargetValue){
+		out.println("evalLR: " );
+
+		Auc collector = new Auc();
+		Integer[] res = {0, 0, 0, 0};//abcd;
+		for(Map.Entry<LocalDate, Map<String, Vector>> e: samples.entrySet()){
+			LocalDate ld = e.getKey();
+	
+			for(Map.Entry<String, Vector> eInner:e.getValue().entrySet()){
+				String accountId = eInner.getKey();
+				Vector input = eInner.getValue();
+				int targetValue = accountTargetValue.get(ld).getOrDefault(accountId, 0);
+				if(targetValue == 2)
+					targetValue = 1;
+				else 
+					targetValue = 0;
+				
+				double score = lr.classifyScalar(input);	
+	        	collector.add(targetValue, score);
+	        	
+				int predictValue = score > Utils.CLASSIFY_VALUE ? 1 : 0;
+				
+				if (targetValue == 1) {
+					if (predictValue == 1) {
+						res[0]++; //流失用户预测正确
+					} else {
+						res[2]++; //流失用户预测错误
+					}
+				} else {
+					if (predictValue == 1) {
+						res[1]++; //非流失用户预测错误
+					} else {
+						res[3]++; //非流失用户预测正确
+					}
+				}
+	
+			}
+		}
+		
+		
+		int all = res[0] + res[1] + res[2] + res[3];
+		out.printf("result matrix: lostcnt:%d	remaincnt:%d%n", res[0]+res[2], res[1]+res[3]);
+		out.printf("A:%2.4f	B:%2.4f %n", (double)res[0]/all, (double)res[1]/all);
+		out.printf("C:%2.4f	D:%2.4f %n", (double)res[2]/all, (double)res[3]/all);
+
+		double coverRate = (double) res[0]/(res[0]+res[2]);//覆盖率
+		double rightRate = (double) (res[0]+res[3])/all;//正确率
+		double hitRate = (double) res[0]/(res[0]+res[1]);//命中率
+		out.printf(Locale.ENGLISH, "cover rate:%2.4f   right rate:%2.4f   hit rate:%2.4f  %n"
+				, coverRate, rightRate, hitRate);
+		
+		out.printf(Locale.ENGLISH, "AUC = %.2f%n", collector.auc());
+		
 	}
 	
 	public static void similarAnalysis(Map<Integer, List<Vector>> samplesClass){
@@ -217,7 +305,7 @@ public class ReadHiveSelfSimilar {
 				String accountId = e.getKey();
 
 				Map<String, Integer> map = e.getValue();
-				int onlineDur = map.getOrDefault("online_dur", 0) / 300;
+
 				int roleLevel = map.getOrDefault("role_level", 0);
 				if (roleLevel < 25) {// 后续需要过滤掉
 					Map<String, Integer> lowLevel = lowLevelAccountIds.getOrDefault(ld, new HashMap<>());
@@ -228,16 +316,24 @@ public class ReadHiveSelfSimilar {
 				LocalDate beforLd = ld.minusDays(numFeatures - 1);
 				LocalDate beforSet = start.isAfter(beforLd) ? start : beforLd;
 
-				for (LocalDate ldCur = beforSet; !ldCur.isAfter(ld); ldCur = ldCur.plusDays(1)) {
-					if (ldCur.isAfter(end))// 超过end日期向量不全，舍弃
-						break;
-					Map<String, Vector> accountVec = ldAccountVec.getOrDefault(ldCur, new HashMap<>());
-					Vector v = accountVec.getOrDefault(accountId, new SequentialAccessSparseVector(numFeatures));
-					int index = Utils.dateDiff(ld, ldCur);
-					v.setQuick(index, onlineDur);
-					accountVec.put(accountId, v);
-					ldAccountVec.put(ldCur, accountVec);
+				
+				
+				for(int i=0;i<names.length;i++){
+					int value = map.getOrDefault(names[i], 0);
+					for (LocalDate ldCur = beforSet; !ldCur.isAfter(ld); ldCur = ldCur.plusDays(1)) {
+						if (ldCur.isAfter(end))// 超过end日期向量不全，舍弃
+							break;
+						Map<String, Vector> accountVec = ldAccountVec.getOrDefault(ldCur, new HashMap<>());
+						Vector v = accountVec.getOrDefault(accountId, new SequentialAccessSparseVector(numFeatures));
+						v.set(0, 1);
+						v.set(1, roleLevel);
+						int index = Utils.dateDiff(ld, ldCur);
+						v.setQuick(2 + i*numFeatures + index, value);
+						accountVec.put(accountId, v);
+						ldAccountVec.put(ldCur, accountVec);
+					}
 				}
+				
 
 			}
 
@@ -442,6 +538,8 @@ public class ReadHiveSelfSimilar {
 		}
 
 	}
+	
+	
 
 	private static Map<Integer, List<Vector>> getClassValue(Map<LocalDate, Map<String, Integer>> accountTargetValue
 			, Map<LocalDate, Map<String, Vector>> samples) {
