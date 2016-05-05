@@ -16,7 +16,13 @@ public class UtilsTest {
 		
 		String s = Utils.getOrDefault("sample_dir", "abc");
 		System.out.println(s);
-		
+
+	}
+	
+	@Test
+	public void printResMatrixTest(){
+		Integer[][] res = { {1,2,3}, {4,4,4}, {5,5,5} };
+		Utils.printResMatrix(res);
 	}
 
 }

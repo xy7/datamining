@@ -341,51 +341,55 @@ public class Utils {
 				, all, suc);
 	}
 	
-	public static void printResMatrix(Integer[][] res) {
+	
+	public static double[] printResMatrix(int[][] res) {
+		int m = res[0].length;
 		int all = 0;
-		for (int i = 0; i < 3; i++)
-			for (int j = 0; j < 3; j++)
+		int rightCnt = 0;
+		int[] rowSum = new int[m];
+		int[] colSum = new int[m];
+		for (int i = 0; i < m; i++){
+			for (int j = 0; j < m; j++){
 				all += res[i][j];
+				rowSum[i] += res[i][j];
+				colSum[j] += res[i][j];
+			}
+			rightCnt += res[i][i];
+		}
+			
+		
+		out.println("result matrix all:" + all + " right rate: " + (double)rightCnt/all);
 
-		out.printf("result matrix all: %d, 0:%d, 1: %d, 2: %d, right rate: %2.4f %n"
-				, all
-				, res[0][0] + res[0][1] + res[0][2]
-				, res[1][0] + res[1][1] + res[1][2]
-				, res[2][0] + res[2][1] + res[2][2]
-				, (double)(res[0][0]+res[1][1]+res[2][2])/all);
-		for (int i = 0; i < 3; i++) {
-			for (int j = 0; j < 3; j++) {
-				out.printf("%2.4f ", (double) res[i][j] / all);
+		for (int i = 0; i < m; i++) {
+			out.printf("class_%d cnt: %d\t ", i, rowSum[i]);
+			for (int j = 0; j < m; j++) {
+				out.printf(" %2.4f ", (double) res[i][j] / all);
 			}
 			out.printf("coverRate %2.4f hitRate %2.4f "
-					, (double)res[i][i]/(res[i][0]+res[i][1]+res[i][2])
-					, (double)res[i][i]/(res[0][i]+res[1][i]+res[2][i]));
+					, (double)res[i][i]/rowSum[i]
+					, (double)res[i][i]/colSum[i]);
 			out.printf("%n");
 		}
+		
+		int index = m/2;
+		double[] ret = {(double)res[index][index]/rowSum[index]
+				, (double)rightCnt/all
+				, (double)res[index][index]/colSum[index]};
+		return ret;
 	}
 	
-	public static void printResMatrix(int[][] res) {
-		int all = 0;
-		for (int i = 0; i < 3; i++)
-			for (int j = 0; j < 3; j++)
-				all += res[i][j];
-
-		out.printf("result matrix all: %d, 0:%d, 1: %d, 2: %d, right rate: %2.4f %n"
-				, all
-				, res[0][0] + res[0][1] + res[0][2]
-				, res[1][0] + res[1][1] + res[1][2]
-				, res[2][0] + res[2][1] + res[2][2]
-				, (double)(res[0][0]+res[1][1]+res[2][2])/all);
-		for (int i = 0; i < 3; i++) {
-			for (int j = 0; j < 3; j++) {
-				out.printf("%2.4f ", (double) res[i][j] / all);
+	public static double[] printResMatrix(Integer[][] res) {
+		int m = res[0].length;
+		int[][] res2 = new int[m][m];
+		for(int i=0;i<m;i++){
+			for(int j=0;j<m;j++){
+				res2[i][j] = res[i][j];
 			}
-			out.printf("coverRate %2.4f hitRate %2.4f "
-					, (double)res[i][i]/(res[i][0]+res[i][1]+res[i][2])
-					, (double)res[i][i]/(res[0][i]+res[1][i]+res[2][i]));
-			out.printf("%n");
 		}
+		return printResMatrix(res2);
 	}
+	
+	
 	
 	public static void main(String[] args) {
 		int i = 10;

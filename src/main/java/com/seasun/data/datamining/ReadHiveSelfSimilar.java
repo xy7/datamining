@@ -133,7 +133,7 @@ public class ReadHiveSelfSimilar {
 		out.println("evalLR: " );
 
 		Auc collector = new Auc();
-		Integer[] res = {0, 0, 0, 0};//abcd;
+		int[][] res = new int[2][2];//abcd;
 		int[][] mayRes = new int[3][3];
 		for(Map.Entry<LocalDate, Map<String, Vector>> e: samples.entrySet()){
 			LocalDate ld = e.getKey();
@@ -149,20 +149,8 @@ public class ReadHiveSelfSimilar {
 	        	
 				int predictValue = score > Utils.CLASSIFY_VALUE ? 1 : 0;
 				
+				res[targetValue][predictValue] ++;
 				
-				if (targetValue == 1) {
-					if (predictValue == 1) {
-						res[0]++; //流失用户预测正确
-					} else {
-						res[2]++; //流失用户预测错误
-					}
-				} else {
-					if (predictValue == 1) {
-						res[1]++; //非流失用户预测错误
-					} else {
-						res[3]++; //非流失用户预测正确
-					}
-				}
 				
 				if(predictValue == 0){
 					int predictMay = KNN(input, samplesClass);
@@ -173,21 +161,9 @@ public class ReadHiveSelfSimilar {
 	
 			}
 		}
-		
-		
-		int all = res[0] + res[1] + res[2] + res[3];
-		out.printf("result matrix: lostcnt:%d	remaincnt:%d%n", res[0]+res[2], res[1]+res[3]);
-		out.printf("A:%2.4f	B:%2.4f %n", (double)res[0]/all, (double)res[1]/all);
-		out.printf("C:%2.4f	D:%2.4f %n", (double)res[2]/all, (double)res[3]/all);
-
-		double coverRate = (double) res[0]/(res[0]+res[2]);//覆盖率
-		double rightRate = (double) (res[0]+res[3])/all;//正确率
-		double hitRate = (double) res[0]/(res[0]+res[1]);//命中率
-		out.printf(Locale.ENGLISH, "cover rate:%2.4f   right rate:%2.4f   hit rate:%2.4f  %n"
-				, coverRate, rightRate, hitRate);
-		
-		out.printf(Locale.ENGLISH, "AUC = %.2f%n", collector.auc());
-		
+		out.println("lr result:");
+		Utils.printResMatrix(res);
+		out.println("knn result:");
 		Utils.printResMatrix(mayRes);
 		
 	}

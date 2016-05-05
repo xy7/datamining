@@ -93,7 +93,7 @@ public class ReadHive{
 			return;
 		
 		Auc collector = new Auc();
-		Integer[] res = {0, 0, 0, 0};//abcd;
+		Integer[][] res = {{0, 0}, {0, 0}};//abcd;
 		Map<String, Integer> lostLd = lost.get(ld);
 		Utils.analysisHdfsFiles(lfss, new LineHandler(){
 			@Override
@@ -111,19 +111,8 @@ public class ReadHive{
 		        	
 					int predictValue = score > Utils.CLASSIFY_VALUE ? 1 : 0;
 					
-					if (targetValue == 1) {
-						if (predictValue == 1) {
-							res[0]++; //流失用户预测正确
-						} else {
-							res[2]++; //流失用户预测错误
-						}
-					} else {
-						if (predictValue == 1) {
-							res[1]++; //非流失用户预测错误
-						} else {
-							res[3]++; //非流失用户预测正确
-						}
-					}
+					res[targetValue][predictValue] ++;
+
 				} catch (Exception e) {
 					//e.printStackTrace();
 					//out.println(e);
@@ -133,20 +122,11 @@ public class ReadHive{
 			}
 		});
 		
-		int all = res[0] + res[1] + res[2] + res[3];
-		out.printf("result matrix: lostcnt:%d	remaincnt:%d%n", res[0]+res[2], res[1]+res[3]);
-		out.printf("A:%2.4f	B:%2.4f %n", (double)res[0]/all, (double)res[1]/all);
-		out.printf("C:%2.4f	D:%2.4f %n", (double)res[2]/all, (double)res[3]/all);
-
-		double coverRate = (double) res[0]/(res[0]+res[2]);//覆盖率
-		double rightRate = (double) (res[0]+res[3])/all;//正确率
-		double hitRate = (double) res[0]/(res[0]+res[1]);//命中率
-		out.printf(Locale.ENGLISH, "cover rate:%2.4f   right rate:%2.4f   hit rate:%2.4f  %n"
-				, coverRate, rightRate, hitRate);
+		Utils.printResMatrix(res);
 		
 		out.printf(Locale.ENGLISH, "AUC = %.2f%n", collector.auc());
 		
-		double[] tmp = {coverRate, rightRate, hitRate};
+		double[] tmp = Utils.printResMatrix(res);//{coverRate, rightRate, hitRate};
 		resMap.put(ld.toString(), tmp);
 	}
 
