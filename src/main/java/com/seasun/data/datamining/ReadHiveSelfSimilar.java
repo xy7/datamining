@@ -79,13 +79,13 @@ public class ReadHiveSelfSimilar {
 		Map<Integer, List<Vector>> samplesClass = getClassValue(accountTargetValue, samples);
 		train(lr, samples, accountTargetValue);
 //		similarAnalysis(samplesClass);
-		evalLR(lr, samples, accountTargetValue);
+		evalLR(lr, samples, accountTargetValue, samplesClass);
 
 		// step3/3, eval data
 		out.println("eval");
 		Map<LocalDate, Map<String, Vector>> evalSamples = mapTransfer(evalStart, evalEnd, numFeatures, true);
 		Map<LocalDate, Map<String, Integer>> accountTargetValue2 = getTargetValue(evalStart, evalEnd, evalSamples, false);
-		evalLR(lr, evalSamples, accountTargetValue2);
+		evalLR(lr, evalSamples, accountTargetValue2, samplesClass);
 
 	}
 	
@@ -106,13 +106,35 @@ public class ReadHiveSelfSimilar {
 		}
 	}
 	
+	private static int KNN(Vector input, Map<Integer, List<Vector>> samplesClass){
+		double min0 = getMin(input, samplesClass.get(0));
+		double min1 = getMin(input, samplesClass.get(1));
+		if(min0<min1)
+			return 0;
+		else 
+			return 1;
+	}
+	
+	private static double getMin(Vector input, List<Vector> samples){
+		double res = Double.MAX_VALUE;
+		for(Vector s:samples){
+			double distance = vectorSimilar(input, s);
+			if(distance < res)
+				res = distance;
+		}
+		
+		return res;
+	}
+	
 	private static void evalLR(OnlineLogisticRegression lr
 			, Map<LocalDate, Map<String, Vector>> samples
-			, Map<LocalDate, Map<String, Integer>> accountTargetValue){
+			, Map<LocalDate, Map<String, Integer>> accountTargetValue
+			, Map<Integer, List<Vector>> samplesClass){
 		out.println("evalLR: " );
 
 		Auc collector = new Auc();
 		Integer[] res = {0, 0, 0, 0};//abcd;
+		Integer[][] mayRes = new Integer[3][3];
 		for(Map.Entry<LocalDate, Map<String, Vector>> e: samples.entrySet()){
 			LocalDate ld = e.getKey();
 	
@@ -130,6 +152,7 @@ public class ReadHiveSelfSimilar {
 	        	
 				int predictValue = score > Utils.CLASSIFY_VALUE ? 1 : 0;
 				
+				
 				if (targetValue == 1) {
 					if (predictValue == 1) {
 						res[0]++; //流失用户预测正确
@@ -142,6 +165,13 @@ public class ReadHiveSelfSimilar {
 					} else {
 						res[3]++; //非流失用户预测正确
 					}
+				}
+				
+				if(predictValue == 0){
+					int predictMay = KNN(input, samplesClass);
+					mayRes[targetValue][predictMay] ++;
+				} else{
+					mayRes[targetValue][2] ++;
 				}
 	
 			}
@@ -160,6 +190,8 @@ public class ReadHiveSelfSimilar {
 				, coverRate, rightRate, hitRate);
 		
 		out.printf(Locale.ENGLISH, "AUC = %.2f%n", collector.auc());
+		
+		Utils.printResMatrix(mayRes);
 		
 	}
 	
