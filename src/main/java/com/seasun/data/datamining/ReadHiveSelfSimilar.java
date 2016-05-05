@@ -397,7 +397,7 @@ public class ReadHiveSelfSimilar {
 				Map.Entry<String, Vector> eInner = itInner.next();
 				Vector v = eInner.getValue();
 				int n = v.getNumNonZeroElements();
-				if (n < 2) {
+				if (n < 4) {
 					zeroCnt++;
 					itInner.remove();
 				} else {
