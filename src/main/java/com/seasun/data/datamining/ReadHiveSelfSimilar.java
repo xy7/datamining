@@ -141,12 +141,9 @@ public class ReadHiveSelfSimilar {
 			for(Map.Entry<String, Vector> eInner:e.getValue().entrySet()){
 				String accountId = eInner.getKey();
 				Vector input = eInner.getValue();
-				int targetValue = accountTargetValue.get(ld).getOrDefault(accountId, 0);
-				if(targetValue == 2)
-					targetValue = 1;
-				else 
-					targetValue = 0;
-				
+				int mayValue = accountTargetValue.get(ld).getOrDefault(accountId, 0);
+				int targetValue = mayValue==2?1:0;
+
 				double score = lr.classifyScalar(input);	
 	        	collector.add(targetValue, score);
 	        	
@@ -169,9 +166,9 @@ public class ReadHiveSelfSimilar {
 				
 				if(predictValue == 0){
 					int predictMay = KNN(input, samplesClass);
-					mayRes[targetValue][predictMay] ++;
+					mayRes[mayValue][predictMay] ++;
 				} else{
-					mayRes[targetValue][2] ++;
+					mayRes[mayValue][2] ++;
 				}
 	
 			}
