@@ -282,7 +282,8 @@ public class KmeansSelfSimilar {
 				String accountId = e.getKey();
 
 				Map<String, Integer> map = e.getValue();
-				int onlineDur = map.getOrDefault("online_dur", 0) / 300;
+				//int onlineDur = map.getOrDefault("online_dur", 0) / 300;
+				int onlineDur = map.getOrDefault("login_cnt", 0) / 300;
 				int roleLevel = map.getOrDefault("role_level", 0);
 				if (roleLevel < 25) {// 后续需要过滤掉
 					Map<String, Integer> lowLevel = lowLevelAccountIds.getOrDefault(ld, new HashMap<>());

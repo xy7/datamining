@@ -78,6 +78,7 @@ public class ReadHiveSelfSimilar {
 		Map<LocalDate, Map<String, Integer>> accountTargetValue = getTargetValue(start, end, samples, false);
 		Map<Integer, List<Vector>> samplesClass = getClassValue(accountTargetValue, samples);
 		train(lr, samples, accountTargetValue);
+		Utils.saveModel(lr);
 //		similarAnalysis(samplesClass);
 		evalLR(lr, samples, accountTargetValue, samplesClass);
 
@@ -135,6 +136,7 @@ public class ReadHiveSelfSimilar {
 		Auc collector = new Auc();
 		int[][] res = new int[2][2];//abcd;
 		int[][] mayRes = new int[3][3];
+		int sampleCnt = 0;
 		for(Map.Entry<LocalDate, Map<String, Vector>> e: samples.entrySet()){
 			LocalDate ld = e.getKey();
 	
@@ -157,6 +159,20 @@ public class ReadHiveSelfSimilar {
 					mayRes[mayValue][predictMay] ++;
 				} else{
 					mayRes[mayValue][2] ++;
+				}
+				
+				// print score
+				if (SCORE_FREQ != 0 && (++sampleCnt) % SCORE_FREQ == 0) {
+					// check performance while this is still news
+					double logP = lr.logLikelihood(targetValue, input);
+					Vector vec = lr.classify(input);
+					double p;
+					if (targetValue >= 1)
+						p = vec.get(targetValue - 1);
+					else
+						p = 1 - vec.get(0) - vec.get(1);
+					out.printf(Locale.ENGLISH, "sampleCnt: %d   %2d  %1.4f %n",
+							sampleCnt, targetValue, p );
 				}
 	
 			}

@@ -365,7 +365,7 @@ public class Utils {
 			for (int j = 0; j < m; j++) {
 				out.printf(" %2.4f ", (double) res[i][j] / all);
 			}
-			out.printf("coverRate %2.4f hitRate %2.4f "
+			out.printf("\tcoverRate %2.4f hitRate %2.4f "
 					, (double)res[i][i]/rowSum[i]
 					, (double)res[i][i]/colSum[i]);
 			out.printf("%n");
