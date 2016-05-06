@@ -692,7 +692,7 @@ public class ReadHiveSelfSimilar {
 				} else {
 					Vector v = target.get(accountId);
 					int nextHalfLoginDaycnt = 0;
-					for (int i = 0; i < TARGET_AFTTER_DAYS / 2; i++) {
+					for (int i = 2; i < TARGET_AFTTER_DAYS / 2 + 2; i++) {
 						if (v.get(i) > LOST_THRESHOLD) {
 							nextHalfLoginDaycnt = 1;
 							break;
@@ -700,7 +700,7 @@ public class ReadHiveSelfSimilar {
 					}
 
 					int lastHalfLoginDaycnt = 0;
-					for (int i = TARGET_AFTTER_DAYS / 2; i < TARGET_AFTTER_DAYS; i++) {
+					for (int i = TARGET_AFTTER_DAYS / 2 + 2; i < TARGET_AFTTER_DAYS + 2; i++) {
 						if (v.get(i) > LOST_THRESHOLD) {
 							lastHalfLoginDaycnt = 1;
 							break;
