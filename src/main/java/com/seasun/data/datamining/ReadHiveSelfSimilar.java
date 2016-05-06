@@ -77,7 +77,13 @@ public class ReadHiveSelfSimilar {
 		out.println("train");
 		Map<LocalDate, Map<String, Integer>> accountTargetValue = getTargetValue(start, end, samples, false);
 		Map<Integer, List<Vector>> samplesClass = getClassValue(accountTargetValue, samples);
-		train(lr, samples, accountTargetValue);
+		
+		int trainPass = Utils.getOrDefault("train_pass", 1);
+		for(int i=0;i<trainPass;i++){
+			out.printf(Locale.ENGLISH, "--------pass: %2d ---------%n", i);
+			train(lr, samples, accountTargetValue);
+		}
+
 		Utils.saveModel(lr);
 //		similarAnalysis(samplesClass);
 		evalLR(lr, samples, accountTargetValue, samplesClass);
@@ -95,6 +101,8 @@ public class ReadHiveSelfSimilar {
 			, Map<LocalDate, Map<String, Integer>> accountTargetValue){
 		out.println("train: ");
 		
+		int sampleCnt = 0;
+		
 		for(Map.Entry<LocalDate, Map<String, Vector>> e: samples.entrySet()){
 			LocalDate ld = e.getKey();
 	
@@ -103,6 +111,15 @@ public class ReadHiveSelfSimilar {
 				Vector input = eInner.getValue();
 				int targetValue = accountTargetValue.get(ld).getOrDefault(accountId, 0);
 				lr.train(targetValue == 2? 1:0, input);
+				
+				// print score
+				if (SCORE_FREQ != 0 && (++sampleCnt) % SCORE_FREQ == 0) {
+					// check performance while this is still news
+					double logP = lr.logLikelihood(targetValue, input);
+					double p = lr.classifyScalar(input);
+					out.printf(Locale.ENGLISH, "sampleCnt: %d  %2d  %1.4f  |  %2.6f %10.4f%n",
+							sampleCnt, targetValue, p, lr.currentLearningRate(), logP);
+				}
 			}
 		}
 	}
