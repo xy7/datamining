@@ -419,13 +419,13 @@ public class ReadHiveSelfSimilar {
 				Map.Entry<String, Vector> eInner = itInner.next();
 				Vector v = eInner.getValue();
 				int n = 0;
-				for(int i=2+7; i<2+7+numFeatures; i++){
+				for(int i=2; i<2+numFeatures; i++){
 					if(v.get(i)>=0.9)
 						n++;
 						
 				}
 				//int n = v.getNumNonZeroElements();
-				if (n < 1) {
+				if (n < 2) {
 					zeroCnt++;
 					itInner.remove();
 				} else {
