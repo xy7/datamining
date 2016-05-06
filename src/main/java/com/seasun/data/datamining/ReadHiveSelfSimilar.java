@@ -489,10 +489,10 @@ public class ReadHiveSelfSimilar {
 			out.writeObject(accountMaps);
 			out.close();
 		} else {
-			out.println("serial file exists read to Map");
+			//out.println("serial file exists read to Map");
 			ObjectInputStream in = new ObjectInputStream(new FileInputStream(file));
 			Map<String, Map<String, Integer>> accountMap = (Map<String, Map<String, Integer>>) in.readObject();
-			out.printf("date:%s size:%d %n", ld.toString(), accountMap.size());
+			//out.printf("date:%s size:%d %n", ld.toString(), accountMap.size());
 			ldAccountMaps.put(ld, accountMap);
 			in.close();
 		}
