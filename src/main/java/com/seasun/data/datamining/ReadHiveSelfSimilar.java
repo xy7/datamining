@@ -187,6 +187,7 @@ public class ReadHiveSelfSimilar {
 	
 			}
 		}
+		out.printf(Locale.ENGLISH, "AUC = %.2f%n", collector.auc());
 		out.println("lr result:");
 		Utils.printResMatrix(res);
 		out.println("knn result:");
@@ -406,8 +407,14 @@ public class ReadHiveSelfSimilar {
 			while (itInner.hasNext()) {
 				Map.Entry<String, Vector> eInner = itInner.next();
 				Vector v = eInner.getValue();
-				int n = v.getNumNonZeroElements();
-				if (n < 4) {
+				int n = 0;
+				for(int i=2; i<2+numFeatures; i++){
+					if(v.get(i)>=0.9)
+						n++;
+						
+				}
+				//int n = v.getNumNonZeroElements();
+				if (n < 2) {
 					zeroCnt++;
 					itInner.remove();
 				} else {
