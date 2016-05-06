@@ -70,7 +70,7 @@ public class ReadHiveSelfSimilar {
 		// new code
 		// step1/3, load all of hive data to map, write to local file
 		// if exits local file, load to map
-		loadAllHiveData(start, end.plusDays(numFeatures + TARGET_AFTTER_DAYS - 1));
+		loadAllHiveData(start, evalEnd.plusDays(numFeatures + TARGET_AFTTER_DAYS - 1));
 
 		// step2/3, train data
 		Map<LocalDate, Map<String, Vector>> samples = mapTransfer(start, end, numFeatures, true);
@@ -83,10 +83,10 @@ public class ReadHiveSelfSimilar {
 		evalLR(lr, samples, accountTargetValue, samplesClass);
 
 		// step3/3, eval data
-//		out.println("eval");
-//		Map<LocalDate, Map<String, Vector>> evalSamples = mapTransfer(evalStart, evalEnd, numFeatures, true);
-//		Map<LocalDate, Map<String, Integer>> accountTargetValue2 = getTargetValue(evalStart, evalEnd, evalSamples, false);
-//		evalLR(lr, evalSamples, accountTargetValue2, samplesClass);
+		out.println("eval");
+		Map<LocalDate, Map<String, Vector>> evalSamples = mapTransfer(evalStart, evalEnd, numFeatures, true);
+		Map<LocalDate, Map<String, Integer>> accountTargetValue2 = getTargetValue(evalStart, evalEnd, evalSamples, false);
+		evalLR(lr, evalSamples, accountTargetValue2, samplesClass);
 
 	}
 	
