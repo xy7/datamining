@@ -81,7 +81,8 @@ public class ReadHiveSelfSimilar {
 		int trainPass = Utils.getOrDefault("train_pass", 1);
 		for(int i=0;i<trainPass;i++){
 			out.printf(Locale.ENGLISH, "--------pass: %2d ---------%n", i);
-			train(lr, samples, accountTargetValue);
+			if( train(lr, samples, accountTargetValue) < 0.00001 )
+				break;
 		}
 
 		Utils.saveModel(lr);
@@ -96,7 +97,7 @@ public class ReadHiveSelfSimilar {
 
 	}
 	
-	private static void train(OnlineLogisticRegression lr
+	private static double train(OnlineLogisticRegression lr
 			, Map<LocalDate, Map<String, Vector>> samples
 			, Map<LocalDate, Map<String, Integer>> accountTargetValue){
 		out.println("train: ");
@@ -120,8 +121,11 @@ public class ReadHiveSelfSimilar {
 					out.printf(Locale.ENGLISH, "sampleCnt: %d  %2d  %1.4f  |  %2.6f %10.4f%n",
 							sampleCnt, targetValue, p, lr.currentLearningRate(), logP);
 				}
+				
 			}
 		}
+		
+		return lr.currentLearningRate();
 	}
 	
 	private static int KNN(Vector input, Map<Integer, List<Vector>> samplesClass){
@@ -728,7 +732,7 @@ public class ReadHiveSelfSimilar {
 				} else {
 					Vector v = target.get(accountId);
 					int nextHalfLoginDaycnt = 0;
-					for (int i = 2; i < TARGET_AFTTER_DAYS / 2 + 2; i++) {
+					for (int i = 2 + 7; i < TARGET_AFTTER_DAYS / 2 + 2 + 7; i++) {
 						if (v.get(i) > LOST_THRESHOLD) {
 							nextHalfLoginDaycnt = 1;
 							break;
@@ -736,7 +740,7 @@ public class ReadHiveSelfSimilar {
 					}
 
 					int lastHalfLoginDaycnt = 0;
-					for (int i = TARGET_AFTTER_DAYS / 2 + 2; i < TARGET_AFTTER_DAYS + 2; i++) {
+					for (int i = TARGET_AFTTER_DAYS / 2 + 2 + 7; i < TARGET_AFTTER_DAYS + 2 + 7; i++) {
 						if (v.get(i) > LOST_THRESHOLD) {
 							lastHalfLoginDaycnt = 1;
 							break;
