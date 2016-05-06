@@ -81,7 +81,7 @@ public class ReadHiveSelfSimilar {
 		int trainPass = Utils.getOrDefault("train_pass", 1);
 		for(int i=0;i<trainPass;i++){
 			out.printf(Locale.ENGLISH, "--------pass: %2d ---------%n", i);
-			if( train(lr, samples, accountTargetValue) < 0.00001 )
+			if( train(lr, samples, accountTargetValue) < 0.000001 )
 				break;
 		}
 
