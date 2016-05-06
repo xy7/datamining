@@ -70,7 +70,7 @@ public class ReadHiveSelfSimilar {
 		// new code
 		// step1/3, load all of hive data to map, write to local file
 		// if exits local file, load to map
-		loadAllHiveData(start, evalEnd.plusDays(numFeatures + TARGET_AFTTER_DAYS - 1));
+		loadAllHiveData(start, end.plusDays(numFeatures + TARGET_AFTTER_DAYS - 1));
 
 		// step2/3, train data
 		Map<LocalDate, Map<String, Vector>> samples = mapTransfer(start, end, numFeatures, true);
@@ -83,10 +83,10 @@ public class ReadHiveSelfSimilar {
 		evalLR(lr, samples, accountTargetValue, samplesClass);
 
 		// step3/3, eval data
-		out.println("eval");
-		Map<LocalDate, Map<String, Vector>> evalSamples = mapTransfer(evalStart, evalEnd, numFeatures, true);
-		Map<LocalDate, Map<String, Integer>> accountTargetValue2 = getTargetValue(evalStart, evalEnd, evalSamples, false);
-		evalLR(lr, evalSamples, accountTargetValue2, samplesClass);
+//		out.println("eval");
+//		Map<LocalDate, Map<String, Vector>> evalSamples = mapTransfer(evalStart, evalEnd, numFeatures, true);
+//		Map<LocalDate, Map<String, Integer>> accountTargetValue2 = getTargetValue(evalStart, evalEnd, evalSamples, false);
+//		evalLR(lr, evalSamples, accountTargetValue2, samplesClass);
 
 	}
 	
@@ -174,7 +174,7 @@ public class ReadHiveSelfSimilar {
 				double score = lr.classifyScalar(input);	
 	        	collector.add(targetValue, score);
 	        	
-				int predictValue = score > Utils.CLASSIFY_VALUE ? 1 : 0;
+				int predictValue = score > Utils.CLASSIFY_VALUE ? 0 : 1;
 				
 				res[targetValue][predictValue] ++;
 				
@@ -439,7 +439,7 @@ public class ReadHiveSelfSimilar {
 
 	private static void loadHiveData(LocalDate ld) throws FileNotFoundException, IOException, ClassNotFoundException {
 		if (ldAccountMaps.containsKey(ld)) {
-			out.println("ldAccountMaps already exits: " + ld.toString());
+			//out.println("ldAccountMaps already exits: " + ld.toString());
 			return;
 		}
 
@@ -500,8 +500,9 @@ public class ReadHiveSelfSimilar {
 
 	// 1, load all of hive data to map, write to local file
 	private static void loadAllHiveData(LocalDate ld1, LocalDate ld2) {
+		out.print("load hive data: ");
 		for (LocalDate ld = ld1; !ld.isAfter(ld2); ld = ld.plusDays(1)) {
-			out.println("load hive data: " + ld.toString());
+			out.print(" " + ld.toString() );
 			try {
 				loadHiveData(ld);
 			} catch (FileNotFoundException e) {
