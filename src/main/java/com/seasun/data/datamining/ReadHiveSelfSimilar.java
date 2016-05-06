@@ -108,9 +108,10 @@ public class ReadHiveSelfSimilar {
 	}
 	
 	private static int KNN(Vector input, Map<Integer, List<Vector>> samplesClass){
-	
-		double min0 = getMin(input, samplesClass.get(0));
-		double min1 = getMinOrSmallerThanOtherMin(input, samplesClass.get(1), min0);
+		int smallIndex = samplesClass.get(0).size() < samplesClass.get(1).size()?0:1;
+		int bigIndex = smallIndex == 0?1:0;
+		double min0 = getMin(input, samplesClass.get(smallIndex));
+		double min1 = getMinOrSmallerThanOtherMin(input, samplesClass.get(bigIndex), min0);
 		if(min0<min1)
 			return 0;
 		else 
@@ -120,7 +121,7 @@ public class ReadHiveSelfSimilar {
 	private static Vector getShortVec(Vector input){
 		Vector shortInput = new SequentialAccessSparseVector(numFeatures);
 		for(int i=0;i<numFeatures;i++){
-			shortInput.setQuick(i, input.get(i+2));
+			shortInput.setQuick(i, input.get(i+2+7));
 		}
 		return shortInput;
 	}
