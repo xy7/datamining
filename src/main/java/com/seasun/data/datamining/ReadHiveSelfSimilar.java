@@ -121,7 +121,7 @@ public class ReadHiveSelfSimilar {
 	private static Vector getShortVec(Vector input){
 		Vector shortInput = new SequentialAccessSparseVector(numFeatures);
 		for(int i=0;i<numFeatures;i++){
-			shortInput.setQuick(i, input.get(i+2+7));
+			shortInput.setQuick(i, input.get(i+2));
 		}
 		return shortInput;
 	}
