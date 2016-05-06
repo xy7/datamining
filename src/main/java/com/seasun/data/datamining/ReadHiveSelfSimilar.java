@@ -113,9 +113,9 @@ public class ReadHiveSelfSimilar {
 		double min0 = getMin(input, samplesClass.get(smallIndex));
 		double min1 = getMinOrSmallerThanOtherMin(input, samplesClass.get(bigIndex), min0);
 		if(min0<min1)
-			return 0;
+			return smallIndex;
 		else 
-			return 1;
+			return bigIndex;
 	}
 	
 	private static Vector getShortVec(Vector input){
