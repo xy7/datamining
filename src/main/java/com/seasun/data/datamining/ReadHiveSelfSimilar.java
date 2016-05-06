@@ -119,12 +119,12 @@ public class ReadHiveSelfSimilar {
 	}
 	
 	private static Vector getShortVec(Vector input){
-		return input;
-//		Vector shortInput = new SequentialAccessSparseVector(numFeatures);
-//		for(int i=0;i<numFeatures;i++){
-//			shortInput.setQuick(i, input.get(i+2));
-//		}
-//		return shortInput;
+		//return input;
+		Vector shortInput = new SequentialAccessSparseVector(numFeatures);
+		for(int i=0;i<numFeatures;i++){
+			shortInput.setQuick(i, input.get(i+2));
+		}
+		return shortInput;
 	}
 	
 	private static double getMin(Vector input, List<Vector> samples){
@@ -419,7 +419,7 @@ public class ReadHiveSelfSimilar {
 				Map.Entry<String, Vector> eInner = itInner.next();
 				Vector v = eInner.getValue();
 				int n = 0;
-				for(int i=2; i<2+numFeatures; i++){
+				for(int i=2+7; i<2+7+numFeatures; i++){
 					if(v.get(i)>=0.9)
 						n++;
 						
