@@ -174,7 +174,7 @@ public class ReadHiveSelfSimilar {
 				double score = lr.classifyScalar(input);	
 	        	collector.add(targetValue, score);
 	        	
-				int predictValue = score > Utils.CLASSIFY_VALUE ? 0 : 1;
+				int predictValue = 1-score > Utils.CLASSIFY_VALUE ? 0 : 1;
 				
 				res[targetValue][predictValue] ++;
 				
