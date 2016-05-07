@@ -56,7 +56,7 @@ public class ReadHiveSelfSimilar {
 		TARGET_AFTTER_DAYS = Utils.getOrDefault("target_after_days", 14);
 		numFeatures = Utils.getOrDefault("num_features", 14);
 		LOST_THRESHOLD = Utils.getOrDefault("lost_threshold", 1.0);
-		LEARN_RATE_THRESHOLD = Utils.getOrDefault("lost_threshold", 0.000005);
+		LEARN_RATE_THRESHOLD = Utils.getOrDefault("learn_rate_threshold", 0.000005);
 		
 		OnlineLogisticRegression lr;
 		lr = new OnlineLogisticRegression(2, 2 + names.length*numFeatures, new L1());
@@ -81,7 +81,7 @@ public class ReadHiveSelfSimilar {
 		Map<LocalDate, Map<String, Integer>> accountTargetValue = getTargetValue(start, end, samples, false);
 		Map<Integer, List<Vector>> samplesClass = getClassValue(accountTargetValue, samples);
 		
-		KmeansSelfSimilar.saveSamples(samplesClass);
+		//KmeansSelfSimilar.saveSamples(samplesClass);
 		
 		int trainPass = Utils.getOrDefault("train_pass", 1);
 		for(int i=0;i<trainPass;i++){
