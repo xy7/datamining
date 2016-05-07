@@ -31,6 +31,8 @@ import org.apache.mahout.math.Vector;
  * 根据空间自相似来预测
  */
 public class ReadHiveSelfSimilar {
+	private static double LEARN_RATE_THRESHOLD = 0.000005;
+
 	private static int TARGET_AFTTER_DAYS = 14;
 
 	private static String APPID = "100001";
@@ -54,6 +56,7 @@ public class ReadHiveSelfSimilar {
 		TARGET_AFTTER_DAYS = Utils.getOrDefault("target_after_days", 14);
 		numFeatures = Utils.getOrDefault("num_features", 14);
 		LOST_THRESHOLD = Utils.getOrDefault("lost_threshold", 1.0);
+		LEARN_RATE_THRESHOLD = Utils.getOrDefault("lost_threshold", 0.000005);
 		
 		OnlineLogisticRegression lr;
 		lr = new OnlineLogisticRegression(2, 2 + names.length*numFeatures, new L1());
@@ -83,7 +86,7 @@ public class ReadHiveSelfSimilar {
 		int trainPass = Utils.getOrDefault("train_pass", 1);
 		for(int i=0;i<trainPass;i++){
 			out.printf(Locale.ENGLISH, "--------pass: %2d ---------%n", i);
-			if( train(lr, samples, accountTargetValue) < 0.000001 )
+			if( train(lr, samples, accountTargetValue) < LEARN_RATE_THRESHOLD )
 				break;
 		}
 
@@ -201,9 +204,9 @@ public class ReadHiveSelfSimilar {
 				
 				res[targetValue][predictValue] ++;
 				
-				
+				int predictMay = 2;
 				if(predictValue == 0){
-					int predictMay = KNN(input, samplesClass);
+					predictMay = KNN(input, samplesClass);
 					mayRes[mayValue][predictMay] ++;
 				} else{
 					mayRes[mayValue][2] ++;
@@ -215,8 +218,8 @@ public class ReadHiveSelfSimilar {
 					double logP = lr.logLikelihood(targetValue, input);
 	
 					double p = lr.classifyScalar(input);
-					out.printf(Locale.ENGLISH, "sampleCnt: %d   %2d  %1.4f %n",
-							sampleCnt, targetValue, p );
+					out.printf(Locale.ENGLISH, "sampleCnt: %d   %2d  %2d  %1.4f %n",
+							sampleCnt, mayValue, predictMay, p );
 				}
 	
 			}
