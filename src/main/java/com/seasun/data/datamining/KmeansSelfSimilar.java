@@ -118,7 +118,7 @@ public class KmeansSelfSimilar {
 			for(Vector v:list){
 				StringBuilder sb = new StringBuilder();
 				boolean isFirst = true;
-				for(int index=0;index<numFeatures;index++){
+				for(int index=0;index<v.size();index++){
 					if(isFirst){
 						isFirst = false;
 					} else{
