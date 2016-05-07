@@ -79,6 +79,15 @@ public class ReadHiveSelfSimilar {
 		Map<LocalDate, Map<String, Vector>> samples = mapTransfer(start, end, numFeatures, true);
 		out.println("train");
 		Map<LocalDate, Map<String, Integer>> accountTargetValue = getTargetValue(start, end, samples, false);
+		
+		//check
+		int sum = 0;
+		for (LocalDate ld = start; !ld.isAfter(end); ld = ld.plusDays(1)) {
+			out.printf("%s, samples size: %d, target size: %d %n"
+					, ld.toString(), samples.get(ld).size(), accountTargetValue.get(ld).size() );
+			sum += samples.get(ld).size();
+		}
+		
 		Map<Integer, List<Vector>> samplesClass = getClassValue(accountTargetValue, samples);
 		
 		//KmeansSelfSimilar.saveSamples(samplesClass);
@@ -133,20 +142,26 @@ public class ReadHiveSelfSimilar {
 		return lr.currentLearningRate();
 	}
 	
-	private static int KNN(Vector input, Map<Integer, List<Vector>> samplesClass){
+	private static int KNN(Vector input, Map<Integer, List<Vector>> samplesClass, int mayValue){
 		int smallIndex = samplesClass.get(0).size() < samplesClass.get(1).size()?0:1;
 		int bigIndex = smallIndex == 0?1:0;
 		Vector minInput0 = new SequentialAccessSparseVector(input.size());
 		double min0 = getMin(input, samplesClass.get(smallIndex), minInput0);
 		Vector minInput1 = new SequentialAccessSparseVector(input.size());
 		double min1 = getMinOrSmallerThanOtherMin(input, samplesClass.get(bigIndex), min0, minInput1);
-		if(min0<min1){
-			out.printf("nearest input: %d, %s, %s %n", smallIndex, input, minInput0);
-			return smallIndex;
+		int res = 1;
+		if(min0 <= min1){
+			//out.printf("nearest input: %d, %s, %s %n", smallIndex, input, minInput0);
+			res = smallIndex;
 		} else {
-			out.printf("nearest input: %d, %s, %s %n", bigIndex, input, minInput1);
-			return bigIndex;
+			//out.printf("nearest input: %d, %s, %s %n", bigIndex, input, minInput1);
+			res = bigIndex;
 		}
+		
+//		if(mayValue == 1 && res != 1){
+//			System.out.println(samplesClass.get(0).contains(input));
+//		}
+		return res;
 	}
 	
 	private static Vector getShortVec(Vector input){
@@ -164,7 +179,7 @@ public class ReadHiveSelfSimilar {
 		for(Vector s:samples){
 			double distance = vectorSimilar(shortInput, getShortVec(s));
 			if(distance < res){
-				minInput = s;
+				minInput.assign(s);
 				res = distance;
 			}
 		}
@@ -177,10 +192,12 @@ public class ReadHiveSelfSimilar {
 		Vector shortInput = getShortVec(input);
 		for(Vector s:samples){
 			double distance = vectorSimilar(shortInput, getShortVec(s));
-			if(distance <= otherMin)
+			if(distance <= otherMin){
+				minInput.assign(s);
 				return distance;
+			}
 			if(distance < res){
-				minInput = s;
+				minInput.assign(s);
 				res = distance;
 			}		
 		}
@@ -198,6 +215,7 @@ public class ReadHiveSelfSimilar {
 		int[][] res = new int[2][2];//abcd;
 		int[][] mayRes = new int[3][3];
 		int sampleCnt = 0;
+		int mayCnt = 0;
 		for(Map.Entry<LocalDate, Map<String, Vector>> e: samples.entrySet()){
 			LocalDate ld = e.getKey();
 	
@@ -216,9 +234,12 @@ public class ReadHiveSelfSimilar {
 				
 				int predictMay = 2;
 				if(predictValue == 0){
-					predictMay = KNN(input, samplesClass);
+					predictMay = KNN(input, samplesClass, mayValue);
 				} 
 				mayRes[mayValue][predictMay] ++;
+				
+				if(mayValue == 1 && predictMay == 1)
+					mayCnt++;
 				
 				// print score
 				if (SCORE_FREQ != 0 && (++sampleCnt) % SCORE_FREQ == 0) {
@@ -234,6 +255,7 @@ public class ReadHiveSelfSimilar {
 		Utils.printResMatrix(res);
 		out.println("knn result:");
 		Utils.printResMatrix(mayRes);
+		out.println("may predict right cnt: " + mayCnt);
 		
 	}
 	
