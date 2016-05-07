@@ -167,8 +167,9 @@ public class ReadHiveSelfSimilar {
 	
 	private static double getMinOrSmallerThanOtherMin(Vector input, List<Vector> samples, double otherMin){
 		double res = Double.MAX_VALUE;
+		Vector shortInput = getShortVec(input);
 		for(Vector s:samples){
-			double distance = vectorSimilar(input, s);
+			double distance = vectorSimilar(shortInput, getShortVec(s));
 			if(distance <= otherMin)
 				return distance;
 			if(distance < res)
@@ -207,16 +208,11 @@ public class ReadHiveSelfSimilar {
 				int predictMay = 2;
 				if(predictValue == 0){
 					predictMay = KNN(input, samplesClass);
-					mayRes[mayValue][predictMay] ++;
-				} else{
-					mayRes[mayValue][2] ++;
-				}
+				} 
+				mayRes[mayValue][predictMay] ++;
 				
 				// print score
 				if (SCORE_FREQ != 0 && (++sampleCnt) % SCORE_FREQ == 0) {
-					// check performance while this is still news
-					double logP = lr.logLikelihood(targetValue, input);
-	
 					double p = lr.classifyScalar(input);
 					out.printf(Locale.ENGLISH, "sampleCnt: %d   %2d  %2d  %1.4f %n",
 							sampleCnt, mayValue, predictMay, p );
@@ -383,9 +379,7 @@ public class ReadHiveSelfSimilar {
 
 				LocalDate beforLd = ld.minusDays(numFeatures - 1);
 				LocalDate beforSet = start.isAfter(beforLd) ? start : beforLd;
-
-				
-				
+	
 				for(int i=0;i<names.length;i++){
 					int value = map.getOrDefault(names[i], 0);
 					for (LocalDate ldCur = beforSet; !ldCur.isAfter(ld); ldCur = ldCur.plusDays(1)) {
