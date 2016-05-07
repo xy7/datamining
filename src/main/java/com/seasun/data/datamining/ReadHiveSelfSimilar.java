@@ -136,12 +136,17 @@ public class ReadHiveSelfSimilar {
 	private static int KNN(Vector input, Map<Integer, List<Vector>> samplesClass){
 		int smallIndex = samplesClass.get(0).size() < samplesClass.get(1).size()?0:1;
 		int bigIndex = smallIndex == 0?1:0;
-		double min0 = getMin(input, samplesClass.get(smallIndex));
-		double min1 = getMinOrSmallerThanOtherMin(input, samplesClass.get(bigIndex), min0);
-		if(min0<min1)
+		Vector minInput0 = new SequentialAccessSparseVector(input.size());
+		double min0 = getMin(input, samplesClass.get(smallIndex), minInput0);
+		Vector minInput1 = new SequentialAccessSparseVector(input.size());
+		double min1 = getMinOrSmallerThanOtherMin(input, samplesClass.get(bigIndex), min0, minInput1);
+		if(min0<min1){
+			out.printf("nearest input: %d, %s, %s %n", smallIndex, input, minInput0);
 			return smallIndex;
-		else 
+		} else {
+			out.printf("nearest input: %d, %s, %s %n", bigIndex, input, minInput1);
 			return bigIndex;
+		}
 	}
 	
 	private static Vector getShortVec(Vector input){
@@ -153,27 +158,31 @@ public class ReadHiveSelfSimilar {
 		return shortInput;
 	}
 	
-	private static double getMin(Vector input, List<Vector> samples){
+	private static double getMin(Vector input, List<Vector> samples, Vector minInput){
 		double res = Double.MAX_VALUE;
 		Vector shortInput = getShortVec(input);
 		for(Vector s:samples){
 			double distance = vectorSimilar(shortInput, getShortVec(s));
-			if(distance < res)
+			if(distance < res){
+				minInput = s;
 				res = distance;
+			}
 		}
 		
 		return res;
 	}
 	
-	private static double getMinOrSmallerThanOtherMin(Vector input, List<Vector> samples, double otherMin){
+	private static double getMinOrSmallerThanOtherMin(Vector input, List<Vector> samples, double otherMin, Vector minInput){
 		double res = Double.MAX_VALUE;
 		Vector shortInput = getShortVec(input);
 		for(Vector s:samples){
 			double distance = vectorSimilar(shortInput, getShortVec(s));
 			if(distance <= otherMin)
 				return distance;
-			if(distance < res)
+			if(distance < res){
+				minInput = s;
 				res = distance;
+			}		
 		}
 		
 		return res;
@@ -538,7 +547,7 @@ public class ReadHiveSelfSimilar {
 		}
 	}
 
-	private static double vectorSimilar(Vector eval, Vector sample) {
+	public static double vectorSimilar(Vector eval, Vector sample) {
 		return eval.minus(sample).norm(2);
 //		Vector diff = eval.minus(sample);
 //		return diff.dot(diff);

@@ -6,6 +6,7 @@ import java.util.Iterator;
 import java.util.Map;
 
 import org.apache.mahout.math.RandomAccessSparseVector;
+import org.apache.mahout.math.SequentialAccessSparseVector;
 import org.apache.mahout.math.Vector;
 import org.junit.Test;
 
@@ -68,6 +69,21 @@ public class ReadHiveSelfSimilarTest {
 		
 		System.out.println(ReadHiveSelfSimilar.getTargetValue(start, end, samples, false));
 		
+	}
+	
+	@Test
+	public void vectorSimilarTest(){
+		Vector v = new SequentialAccessSparseVector(3);
+		v.setQuick(0, 1);
+		v.setQuick(1, 3);
+		v.setQuick(2, 6);
+		
+		Vector v2 = new SequentialAccessSparseVector(3);
+		v2.setQuick(0, 0);
+		v2.setQuick(1, 1);
+		v2.setQuick(2, 2);
+		double res = ReadHiveSelfSimilar.vectorSimilar(v, v2);
+		System.out.println(res);
 	}
 
 }
