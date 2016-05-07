@@ -78,6 +78,8 @@ public class ReadHiveSelfSimilar {
 		Map<LocalDate, Map<String, Integer>> accountTargetValue = getTargetValue(start, end, samples, false);
 		Map<Integer, List<Vector>> samplesClass = getClassValue(accountTargetValue, samples);
 		
+		KmeansSelfSimilar.saveSamples(samplesClass);
+		
 		int trainPass = Utils.getOrDefault("train_pass", 1);
 		for(int i=0;i<trainPass;i++){
 			out.printf(Locale.ENGLISH, "--------pass: %2d ---------%n", i);
